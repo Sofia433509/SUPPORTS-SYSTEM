@@ -125,9 +125,9 @@ export default function OfficeMap() {
   const handleSvgDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const data = JSON.parse(e.dataTransfer.getData("objectData"));
-    if (!svgRef.current) return;
+    // svgRef ya no se usa - usamos e.currentTarget
 
-    const rect = svgRef.current.getBoundingClientRect();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
@@ -153,8 +153,8 @@ export default function OfficeMap() {
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!svgRef.current) return;
-    const rect = svgRef.current.getBoundingClientRect();
+    // svgRef ya no se usa - usamos e.currentTarget
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
@@ -215,14 +215,14 @@ export default function OfficeMap() {
       {/* Header */}
       <OfficeMapHeader />
 
-      {/* 📊 Statistics */}
+      {/*Statistics */}
       <StatsCards 
         totalDesks={totalDesks} 
         reports={reports} 
         noIssues={noIssues} 
       />
 
-      {/* 🎨 Leyenda del Mapa */}
+      {/* Leyenda del Mapa */}
       <MapLegend />
 
       {/* Layout */}

@@ -57,8 +57,6 @@ interface DeskItem {
   placed: boolean;
   /** Indica si el elemento tiene reportes activos (opcional) */
   hasReport?: boolean;
-  /** Indica si es un objeto por defecto del sistema */
-  isDefault?: boolean;
 }
 
 /**
@@ -134,7 +132,7 @@ export default function MapSidebar({
           {/* Botón de pestaña Objects */}
           <button
             onClick={() => setActiveTab('objects')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-bold rounded-lg transition-all ${
+            className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-bold rounded-lg transition-all${
               activeTab === 'objects' ? 'bg-white shadow text-blue-600' : 'text-slate-400'
             }`}
           >
@@ -164,7 +162,7 @@ export default function MapSidebar({
             // Habilitar arrastre del elemento
             draggable
             onDragStart={(e) => handleDragStart(e, item)}
-            className="flex items-center justify-between p-3 bg-white border rounded-lg shadow-sm cursor-grab hover:border-blue-300"
+            className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm cursor-grab hover:border-blue-300"
           >
             {/* Sección izquierda: icono de arrastre e ID */}
             <div className="flex items-center gap-2">
@@ -183,7 +181,6 @@ export default function MapSidebar({
           </div>
         ))}
       </CardContent>
-
       {/* Pie del sidebar: botón de importación CSV */}
       <div className="p-4 border-t">
         {/* Input file oculto que se activa al hacer clic en el botón */}

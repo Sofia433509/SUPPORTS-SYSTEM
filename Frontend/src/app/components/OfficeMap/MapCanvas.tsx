@@ -190,13 +190,14 @@ export default function MapCanvas({
                 width={layer.width}
                 height={layer.height}
                 fill={getFillColor(layer)}
-                rx={8} // Bordes más redondeados para zonas
+                rx={0} // Bordes más redondeados para zonas
                 stroke="#374151" // Borde oscuro
                 strokeWidth={2}
                 onMouseDown={() => onMouseDown(layer.id)} // Iniciar arrastre
                 className="cursor-move" // Cursor de movimiento
               />
-              {/* Texto con el ID del elemento centrado */}
+              {/* Texto con el ID del elemento centrado tambien sentencias de que los tres objetos tienen nombre y 2 sin */}
+              {layer.type !== "zone" && layer.type !== "frame" && (
               <text
                 x={layer.width / 2}
                 y={layer.height / 2}
@@ -205,8 +206,9 @@ export default function MapCanvas({
                 fill="white"
                 className="text-xs font-bold pointer-events-none"
               >
-                {layer.id}
+                {layer.id.split("-").slice(0, -1).join("-")}
               </text>
+            )}
               
               {/* Handle de redimensionamiento (esquina inferior derecha) */}
               <rect
@@ -235,7 +237,7 @@ export default function MapCanvas({
                 width={item.width}
                 height={item.height}
                 fill={getFillColor(item)}
-                rx={6} // Bordes redondeados
+                rx={8} // Bordes redondeados
                 onMouseDown={() => onMouseDown(item.id)} // Iniciar arrastre
                 className="cursor-move" // Cursor de movimiento
               />
