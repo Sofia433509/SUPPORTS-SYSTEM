@@ -91,6 +91,10 @@ interface MapCanvasProps {
   onMouseDown: (id: string) => void;
   /** Callback ejecutado cuando se inicia el redimensionamiento */
   onResizeStart?: (id: string) => void;
+  /** Callback ejecutado cuando se elimina un elemento */
+  onDeleteItem?: (id: string) => void;
+  /** Escala de zoom del canvas */
+  scale?: number;
 }
 
 /**
@@ -140,6 +144,8 @@ export default function MapCanvas({
   onMouseMove,
   onMouseDown,
   onResizeStart,
+  onDeleteItem,
+  scale = 1,
 }: MapCanvasProps) {
   // Referencia al elemento SVG para obtener dimensiones y posiciones
   const svgRef = useRef<SVGSVGElement>(null);
@@ -162,19 +168,28 @@ export default function MapCanvas({
 
       {/* Área del canvas: manejo de drop y mouse */}
       <div
-        className="w-full h-full"
+        className="w-full h-full overflow-auto"
         onDrop={onDrop}
         onDragOver={(e) => e.preventDefault()} // Necesario para permitir drop
         onMouseMove={onMouseMove}
       >
         {/* Elemento SVG principal del canvas */}
-        <svg ref={svgRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT}>
+        <svg 
+          ref={svgRef} 
+          width={CANVAS_WIDTH} 
+          height={CANVAS_HEIGHT}
+          style={{
+            transform: `scale(${scale})`,
+            transformOrigin: '0 0',
+            transition: 'transform 0.1s ease-out'
+          }}
+        >
           
           {/* Definiciones SVG: patrones y filtros */}
           <defs>
             {/* Patrón de cuadrícula de puntos */}
             <pattern id="dotGrid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <circle cx="2" cy="2" r="1.5" fill="#CBD5E1" />
+              <circle cx="2" cy="2" r="1.5" fill="#64748B" />
             </pattern>
           </defs>
           
@@ -209,6 +224,29 @@ export default function MapCanvas({
               </text>
             )}
               
+              {/* Botón de eliminar (X) en la esquina superior derecha */}
+              <circle
+                cx={layer.width - 6}
+                cy={6}
+                r={5}
+                fill="#EF4444"
+                className="cursor-pointer hover:fill-red-700 transition"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteItem?.(layer.id);
+                }}
+              />
+              <text
+                x={layer.width - 6}
+                y={6}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fill="white"
+                className="text-xs font-bold pointer-events-none select-none"
+              >
+                ×
+              </text>
+
               {/* Handle de redimensionamiento (esquina inferior derecha) */}
               <rect
                 x={layer.width - 7.5}
@@ -252,6 +290,46 @@ export default function MapCanvas({
               >
                 {item.id}
               </text>
+
+              {/* Botón de eliminar (X) en la esquina superior derecha */}
+              <circle
+                cx={item.width - 6}
+                cy={6}
+                r={5}
+                fill="#EF4444"
+                className="cursor-pointer hover:fill-red-700 transition"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteItem?.(item.id);
+                }}
+              />
+              <text
+                x={item.width - 6}
+                y={6}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fill="white"
+                className="text-xs font-bold pointer-events-none select-none"
+              >
+                ×
+              </text>
+
+              {/* Handle de redimensionamiento (esquina inferior derecha) */}
+              <rect
+                x={item.width - 8}
+                y={item.height - 8}
+                width={12}
+                height={12}
+                rx={2}
+                fill="#3B82F6"
+                stroke="white"
+                strokeWidth={1}
+                className="cursor-se-resize hover:fill-blue-600 transition"
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  onResizeStart?.(item.id);
+                }}
+              />
             </g>
           ))}
         </svg>

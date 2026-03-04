@@ -69,14 +69,19 @@ const defaultObjects = [
 
 export default function OfficeMap() {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
 
   const [search, setSearch] = useState('');
   // Inicializar desks con los objetos por defecto en el inventario
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [desks, setDesks] = useState<any[]>(defaultObjects);
   const [activeTab, setActiveTab] = useState<'inventory' | 'objects'>('inventory');
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [resizingId, setResizingId] = useState<string | null>(null);
+  const [activeMode, setActiveMode] = useState<'select' | 'add' | 'edit' | 'view'>('select');
+  const [scale, setScale] = useState(1);
+  
+  const MIN_SCALE = 0.5;
+  const MAX_SCALE = 2;
 
   const CANVAS_WIDTH = 2400;
   const CANVAS_HEIGHT = 5000;
@@ -208,55 +213,177 @@ export default function OfficeMap() {
     setResizingId(id);
   };
 
-  return (
-    <div className="space-y-6 p-6 bg-gray-50 min-h-screen select-none"
-         onMouseUp={handleMouseUp}>
+  // Handler para cambiar el modo activo
+  const handleModeChange = (mode: 'add' | 'edit' | 'view') => {
+    setActiveMode(mode);
+  };
 
-      {/* Header */}
-      <OfficeMapHeader />
+  // Handler para volver al menú inicial
+  const handleBackToMenu = () => {
+    setActiveMode('select');
+    setScale(1); // Resetear zoom al volver al menú
+  };
 
-      {/*Statistics */}
-      <StatsCards 
-        totalDesks={totalDesks} 
-        reports={reports} 
-        noIssues={noIssues} 
-      />
+  // Handlers para zoom
+  const handleZoomIn = () => setScale((s) => Math.min(s + 0.1, MAX_SCALE));
+  const handleZoomOut = () => setScale((s) => Math.max(s - 0.1, MIN_SCALE));
 
-      {/* Leyenda del Mapa */}
-      <MapLegend />
+  // Handler para eliminar un elemento placed y devolverlo al inventory
+  const handleDeleteItem = (id: string) => {
+    setDesks(prev =>
+      prev.map(d =>
+        d.id === id
+          ? { ...d, x: null, y: null, placed: false }
+          : d
+      )
+    );
+  };
 
-      {/* Layout */}
-      <div className="flex gap-6 h-[700px]">
+  // Si el modo es 'view', mostrar solo el canvas sin sidebars
+  if (activeMode === 'view') {
+    return (
+      <div className="space-y-4 p-6 bg-gray-50 min-h-screen select-none flex flex-col"
+           onMouseUp={handleMouseUp}>
 
-        {/* Sidebar */}
-        <MapSidebar
-          search={search}
-          setSearch={setSearch}
-          inventory={inventory}
-          objects={objects}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          onRotateItem={rotateItem}
-          onFileUpload={handleFileUpload}
-        />
+        {/* Header simple */}
+        <OfficeMapHeader />
 
-        {/* Canvas */}
-        <MapCanvas
-          items={items}
-          bgLayers={bgLayers}
-          inventory={inventory}
-          CANVAS_WIDTH={CANVAS_WIDTH}
-          CANVAS_HEIGHT={CANVAS_HEIGHT}
-          onDrop={handleSvgDrop}
-          onMouseMove={handleMouseMove}
-          onMouseDown={handleCanvasMouseDown}
-          onResizeStart={handleResizeStart}
-        />
+        {/* Leyenda */}
+        <MapLegend onModeChange={handleModeChange} onBackToMenu={handleBackToMenu} />
+
+        {/* Canvas a pantalla completa */}
+        <div className="flex-1 flex gap-6 relative">
+          <MapCanvas
+            items={items}
+            bgLayers={bgLayers}
+            inventory={inventory}
+            CANVAS_WIDTH={CANVAS_WIDTH}
+            CANVAS_HEIGHT={CANVAS_HEIGHT}
+            onDrop={handleSvgDrop}
+            onMouseMove={handleMouseMove}
+            onMouseDown={handleCanvasMouseDown}
+            onResizeStart={handleResizeStart}
+            onDeleteItem={handleDeleteItem}
+            scale={scale}
+          />
+
+          {/* Botones de zoom en la esquina inferior derecha */}
+          <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2">
+            <button
+              type="button"
+              className="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow hover:bg-blue-700 transition font-semibold text-lg"
+              onClick={handleZoomIn}
+              aria-label="Zoom in"
+              title="Zoom in"
+            >
+              +
+            </button>
+            <button
+              type="button"
+              className="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow hover:bg-blue-700 transition font-semibold text-lg"
+              onClick={handleZoomOut}
+              aria-label="Zoom out"
+              title="Zoom out"
+            >
+              −
+            </button>
+          </div>
+        </div>
       </div>
+    );
+  }
 
-      {/* Tip */}
-      <TipBox />
+  // Si el modo es 'add' o 'edit', mostrar interfaz completa de mapeo
+  if (activeMode === 'add' || activeMode === 'edit') {
+    return (
+      <div className="space-y-6 p-6 bg-gray-50 min-h-screen select-none"
+           onMouseUp={handleMouseUp}>
 
+        {/* Header */}
+        <OfficeMapHeader />
+
+        {/*Statistics */}
+        <StatsCards 
+          totalDesks={totalDesks} 
+          reports={reports} 
+          noIssues={noIssues} 
+        />
+
+        {/* Leyenda del Mapa */}
+        <MapLegend onModeChange={handleModeChange} onBackToMenu={handleBackToMenu} />
+
+        {/* Layout */}
+        <div className="flex gap-6 h-[700px] relative">
+
+          {/* Sidebar */}
+          <MapSidebar
+            search={search}
+            setSearch={setSearch}
+            inventory={inventory}
+            objects={objects}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            onRotateItem={rotateItem}
+            onFileUpload={handleFileUpload}
+          />
+
+          {/* Canvas */}
+          <MapCanvas
+            items={items}
+            bgLayers={bgLayers}
+            inventory={inventory}
+            CANVAS_WIDTH={CANVAS_WIDTH}
+            CANVAS_HEIGHT={CANVAS_HEIGHT}
+            onDrop={handleSvgDrop}
+            onMouseMove={handleMouseMove}
+            onMouseDown={handleCanvasMouseDown}
+            onResizeStart={handleResizeStart}
+            onDeleteItem={handleDeleteItem}
+            scale={scale}
+          />
+
+          {/* Botones de zoom en la esquina inferior derecha */}
+          <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2">
+            <button
+              type="button"
+              className="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow hover:bg-blue-700 transition font-semibold text-lg"
+              onClick={handleZoomIn}
+              aria-label="Zoom in"
+              title="Zoom in"
+            >
+              +
+            </button>
+            <button
+              type="button"
+              className="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow hover:bg-blue-700 transition font-semibold text-lg"
+              onClick={handleZoomOut}
+              aria-label="Zoom out"
+              title="Zoom out"
+            >
+              −
+            </button>
+          </div>
+        </div>
+
+        {/* Tip */}
+        <TipBox />
+
+      </div>
+    );
+  }
+
+  // Si el modo es 'select', mostrar solo el menú de opciones y el canvas en blanco
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col p-6 space-y-6">
+      <OfficeMapHeader />
+      <MapLegend onModeChange={handleModeChange} onBackToMenu={handleBackToMenu} />
+      
+      {/* Canvas vacío para visualizar el espacio de mapeo */}
+      <div className="flex-1 bg-white rounded-lg border-2 border-dashed border-gray-300 shadow-sm flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-400 text-lg font-medium">Select an option from the menu to begin</p>
+        </div>
+      </div>
     </div>
   );
 }

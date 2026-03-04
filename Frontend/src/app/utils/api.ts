@@ -7,7 +7,7 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-  id_user: number;
+  id_user: number; 
   full_name: string;
   institutional_email: string;
   role_name: string;
