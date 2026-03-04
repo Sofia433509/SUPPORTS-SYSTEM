@@ -57,6 +57,8 @@ interface DeskItem {
   placed: boolean;
   /** Indica si el elemento tiene reportes activos (opcional) */
   hasReport?: boolean;
+  /** Indica si es un objeto por defecto del sistema */
+  isDefault?: boolean;
 }
 
 /**
@@ -68,8 +70,10 @@ interface MapSidebarProps {
   search: string;
   /** Función para actualizar el estado de búsqueda */
   setSearch: (value: string) => void;
-  /** Array de elementos a mostrar en el inventario */
+  /** Array de elementos de escritorio a mostrar en el inventario */
   inventory: DeskItem[];
+  /** Array de objetos (zonas, frames, etc.) a mostrar en la pestaña objects */
+  objects: DeskItem[];
   /** Pestaña actualmente activa ('inventory' o 'objects') */
   activeTab: 'inventory' | 'objects';
   /** Función para cambiar la pestaña activa */
@@ -91,6 +95,7 @@ export default function MapSidebar({
   search,
   setSearch,
   inventory,
+  objects,
   activeTab,
   setActiveTab,
   onRotateItem,
@@ -106,6 +111,9 @@ export default function MapSidebar({
   const handleDragStart = (e: React.DragEvent, item: DeskItem) => {
     e.dataTransfer.setData("objectData", JSON.stringify(item));
   };
+
+  // Determinar qué lista mostrar según la pestaña activa
+  const displayedItems = activeTab === 'inventory' ? inventory : objects;
 
   return (
     // Contenedor principal: Card con ancho fijo de 320px, flex column y overflow oculto
@@ -150,7 +158,7 @@ export default function MapSidebar({
       {/* Lista de elementos del inventario (scrollable) */}
       <CardContent className="flex-1 overflow-y-auto space-y-2">
         {/* Mapeo de cada elemento del inventario */}
-        {inventory.map(item => (
+        {displayedItems.map(item => (
           <div
             key={item.id}
             // Habilitar arrastre del elemento

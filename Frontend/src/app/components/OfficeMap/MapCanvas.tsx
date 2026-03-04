@@ -9,23 +9,33 @@
  * Funcionalidades:
  * - Renderizado de una cuadrícula de fondo (dot grid) usando SVG pattern
  * - Visualización de elementos placed (escritorios) como rectángulos coloreados
+ * - Capas de fondo para zonas y marcos con colores específicos
  * - Sistema de badges para mostrar contadores de elementos
  * - Manejo de eventos de arrastre (drop) desde el sidebar
  * - Movimiento del mouse para detectar posición en el canvas
- * - Colores diferenciados según estado del elemento (verde=ok, rojo=con reportes)
+ * - Colores diferenciados según tipo de elemento:
+ *   - zone: gris oscuro
+ *   - frame: gris translúcido
+ *   - store: amarillo
+ *   - management: amarillo/naranja
+ *   - entrance: azul
+ *   - desk (con reportes): rojo
+ *   - desk (sin reportes): verde
  * 
  * Props:
- * - items: Array de elementos que están placed en el mapa
+ * - items: Array de elementos que están placed en el mapa (escritorios)
+ * - bgLayers: Array de capas de fondo (zonas, marcos)
  * - inventory: Array de elementos pendientes (sin colocar)
  * - CANVAS_WIDTH: Ancho del área SVG en píxeles
  * - CANVAS_HEIGHT: Alto del área SVG en píxeles
  * - onDrop: Función callback cuando se suelta un elemento arrastrado
  * - onMouseMove: Función callback cuando se mueve el mouse sobre el canvas
  * - onMouseDown: Función callback cuando se hace clic en un elemento del mapa
+ * - onResizeStart: Función callback para iniciar el redimensionamiento
  * 
  * Dependencias:
  * - react: useRef para referencias al elemento SVG
- * - ../ui/card: Componentes Card y CardContent
+ * - ../ui/card: Componente Card
  * - ../ui/badge: Componente Badge para indicadores
  */
 
@@ -48,12 +58,14 @@ interface DeskItem {
   width: number;
   /** Alto del elemento en píxeles */
   height: number;
-  /** Tipo de elemento ('desk', 'zone', 'frame', etc.) */
+  /** Tipo de elemento ('desk', 'zone', 'frame', 'store', 'management', 'entrance') */
   type: string;
   /** Indica si el elemento está colocado en el mapa */
   placed: boolean;
   /** Indica si el elemento tiene reportes activos (opcional) */
   hasReport?: boolean;
+  /** Indica si es un objeto por defecto */
+  isDefault?: boolean;
 }
 
 /**
@@ -61,8 +73,10 @@ interface DeskItem {
  * Define todos los parámetros que el componente padre debe proporcionar
  */
 interface MapCanvasProps {
-  /** Array de elementos que ya están colocados en el mapa */
+  /** Array de elementos que ya están colocados en el mapa (escritorios) */
   items: DeskItem[];
+  /** Array de capas de fondo (zonas, marcos) */
+  bgLayers: DeskItem[];
   /** Array de elementos pendientes (sin colocar) */
   inventory: DeskItem[];
   /** Ancho del canvas SVG en píxeles */
@@ -75,7 +89,39 @@ interface MapCanvasProps {
   onMouseMove: (e: React.MouseEvent) => void;
   /** Callback ejecutado cuando se hace clic en un elemento del mapa */
   onMouseDown: (id: string) => void;
+  /** Callback ejecutado cuando se inicia el redimensionamiento */
+  onResizeStart?: (id: string) => void;
 }
+
+/**
+ * Función para obtener el color de relleno según el tipo de elemento
+ * Cada tipo de elemento tiene un color distintivo para mejor visualización
+ */
+const getFillColor = (item: DeskItem): string => {
+  // Si es un escritorio con reporte activo, mostrar en rojo
+  if (item.type === 'desk' && item.hasReport) {
+    return "#EF4444"; // Rojo
+  }
+  // Si es un escritorio sin problemas, mostrar en verde
+  if (item.type === 'desk') {
+    return "#22C55E"; // Verde
+  }
+  // Para los diferentes tipos de objetos/zonas
+  switch (item.type) {
+    case 'zone':
+      return "#6B7280"; // Gris oscuro
+    case 'frame':
+      return "rgba(156, 163, 175, 0.5)"; // Gris translúcido
+    case 'store':
+      return "#F59E0B"; // Amarillo/Naranja
+    case 'management':
+      return "#EAB308"; // Amarillo
+    case 'entrance':
+      return "#3B82F6"; // Azul
+    default:
+      return "#22C55E"; // Verde por defecto
+  }
+};
 
 /**
  * Componente funcional que renderiza el canvas del mapa de oficinas
@@ -86,12 +132,14 @@ interface MapCanvasProps {
  */
 export default function MapCanvas({
   items,
+  bgLayers,
   inventory,
   CANVAS_WIDTH,
   CANVAS_HEIGHT,
   onDrop,
   onMouseMove,
   onMouseDown,
+  onResizeStart,
 }: MapCanvasProps) {
   // Referencia al elemento SVG para obtener dimensiones y posiciones
   const svgRef = useRef<SVGSVGElement>(null);
@@ -104,7 +152,7 @@ export default function MapCanvas({
       <div className="absolute top-4 right-4 z-10 flex gap-2">
         {/* Badge verde: elementos ubicados/colocados */}
         <Badge className="bg-green-600 text-white border-none">
-          {items.length} Located
+          {items.length + bgLayers.length} Located
         </Badge>
         {/* Badge outline: elementos pendientes */}
         <Badge variant="outline">
@@ -133,7 +181,52 @@ export default function MapCanvas({
           {/* Rectángulo de fondo con patrón de cuadrícula */}
           <rect width="100%" height="100%" fill="url(#dotGrid)" />
 
-          {/* Renderizado de cada elemento placed en el mapa */}
+          {/* Renderizado de capas de fondo (zonas, marcos) - SE RENDERIZAN PRIMERO */}
+          {bgLayers.map(layer => (
+            // Grupo SVG para cada capa de fondo
+            <g key={layer.id} transform={`translate(${layer.x}, ${layer.y})`}>
+              {/* Rectángulo de la capa de fondo con color según tipo */}
+              <rect
+                width={layer.width}
+                height={layer.height}
+                fill={getFillColor(layer)}
+                rx={8} // Bordes más redondeados para zonas
+                stroke="#374151" // Borde oscuro
+                strokeWidth={2}
+                onMouseDown={() => onMouseDown(layer.id)} // Iniciar arrastre
+                className="cursor-move" // Cursor de movimiento
+              />
+              {/* Texto con el ID del elemento centrado */}
+              <text
+                x={layer.width / 2}
+                y={layer.height / 2}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fill="white"
+                className="text-xs font-bold pointer-events-none"
+              >
+                {layer.id}
+              </text>
+              
+              {/* Handle de redimensionamiento (esquina inferior derecha) */}
+              <rect
+                x={layer.width - 15}
+                y={layer.height - 15}
+                width={15}
+                height={15}
+                fill="white"
+                stroke="#374151"
+                strokeWidth={1}
+                className="cursor-se-resize"
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  onResizeStart?.(layer.id);
+                }}
+              />
+            </g>
+          ))}
+
+          {/* Renderizado de escritorios/items en el mapa */}
           {items.map(item => (
             // Grupo SVG para cada elemento
             <g key={item.id} transform={`translate(${item.x}, ${item.y})`}>
@@ -141,7 +234,7 @@ export default function MapCanvas({
               <rect
                 width={item.width}
                 height={item.height}
-                fill={item.hasReport ? "#EF4444" : "#22C55E"} // Rojo: tiene reportes, Verde: OK
+                fill={getFillColor(item)}
                 rx={6} // Bordes redondeados
                 onMouseDown={() => onMouseDown(item.id)} // Iniciar arrastre
                 className="cursor-move" // Cursor de movimiento
