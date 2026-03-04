@@ -160,7 +160,7 @@ export default function MapCanvas({
         </Badge>
       </div>
 
-      {/* Área del canvas: maneja eventos de drop y mouse */}
+      {/* Área del canvas: manejo de drop y mouse */}
       <div
         className="w-full h-full"
         onDrop={onDrop}
@@ -190,8 +190,7 @@ export default function MapCanvas({
                 width={layer.width}
                 height={layer.height}
                 fill={getFillColor(layer)}
-                rx={0} // Bordes más redondeados para zonas
-                stroke="#374151" // Borde oscuro
+                rx={6} // Bordes más redondeados para zonas
                 strokeWidth={2}
                 onMouseDown={() => onMouseDown(layer.id)} // Iniciar arrastre
                 className="cursor-move" // Cursor de movimiento
@@ -212,10 +211,11 @@ export default function MapCanvas({
               
               {/* Handle de redimensionamiento (esquina inferior derecha) */}
               <rect
-                x={layer.width - 15}
-                y={layer.height - 15}
-                width={15}
-                height={15}
+                x={layer.width - 7.5}
+                y={layer.height - 7.5}
+                width={10}
+                height={10}
+                rx={7}
                 fill="white"
                 stroke="#374151"
                 strokeWidth={1}
@@ -259,4 +259,3 @@ export default function MapCanvas({
     </Card>
   );
 }
-
