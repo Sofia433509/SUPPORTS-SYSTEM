@@ -1,42 +1,38 @@
 /**
- * Componente: MapCanvas
- * 
- * Descripción:
- * Este componente representa el área principal (canvas) del mapa de oficinas donde
- * se visualizan y manipulan los escritorios y objetos. Utiliza SVG para renderizar
- * los elementos con una cuadrícula de fondo y permite operaciones de drag-and-drop.
- * 
- * Funcionalidades:
- * - Renderizado de una cuadrícula de fondo (dot grid) usando SVG pattern
- * - Visualización de elementos placed (escritorios) como rectángulos coloreados
- * - Capas de fondo para zonas y marcos con colores específicos
- * - Sistema de badges para mostrar contadores de elementos
- * - Manejo de eventos de arrastre (drop) desde el sidebar
- * - Movimiento del mouse para detectar posición en el canvas
- * - Colores diferenciados según tipo de elemento:
- *   - zone: gris oscuro
- *   - frame: gris translúcido
- *   - store: amarillo
- *   - management: amarillo/naranja
- *   - entrance: azul
- *   - desk (con reportes): rojo
- *   - desk (sin reportes): verde
- * 
- * Props:
- * - items: Array de elementos que están placed en el mapa (escritorios)
- * - bgLayers: Array de capas de fondo (zonas, marcos)
- * - inventory: Array de elementos pendientes (sin colocar)
- * - CANVAS_WIDTH: Ancho del área SVG en píxeles
- * - CANVAS_HEIGHT: Alto del área SVG en píxeles
- * - onDrop: Función callback cuando se suelta un elemento arrastrado
- * - onMouseMove: Función callback cuando se mueve el mouse sobre el canvas
- * - onMouseDown: Función callback cuando se hace clic en un elemento del mapa
- * - onResizeStart: Función callback para iniciar el redimensionamiento
- * 
- * Dependencias:
- * - react: useRef para referencias al elemento SVG
- * - ../ui/card: Componente Card
- * - ../ui/badge: Componente Badge para indicadores
+  Componente: MapCanvas
+  
+  Descripción:
+  Este componente representa el área principal (canvas) del mapa de oficinas donde
+  se visualizan y manipulan los escritorios y objetos. Utiliza SVG para renderizar
+  los elementos con una cuadrícula de fondo y permite operaciones de drag-and-drop.
+  
+  Funcionalidades:
+  - Renderizado de una cuadrícula de fondo (dot grid) usando SVG pattern
+  - Visualización de elementos placed (escritorios) como rectángulos coloreados
+  - Capas de fondo para zonas y marcos con colores específicos
+  - Sistema de badges para mostrar contadores de elementos
+  - Manejo de eventos de arrastre (drop) desde el sidebar
+ - Movimiento del mouse para detectar posición en el canvas
+  - Colores diferenciados según tipo de elemento:
+    - zone: gris oscuro
+    - frame: gris translúcido
+    - store: amarillo
+    - management: amarillo/naranja
+    - entrance: azul
+    - desk (con reportes): rojo
+    - desk (sin reportes): verde
+  
+  Props:
+  - items: Array de elementos que están placed en el mapa (escritorios)
+  - bgLayers: Array de capas de fondo (zonas, marcos)
+  - inventory: Array de elementos pendientes (sin colocar)
+  - CANVAS_WIDTH: Ancho del área SVG en píxeles
+  - CANVAS_HEIGHT: Alto del área SVG en píxeles
+  - onDrop: Función callback cuando se suelta un elemento arrastrado
+  - onMouseMove: Función callback cuando se mueve el mouse sobre el canvas
+  - onMouseDown: Función callback cuando se hace clic en un elemento del mapa
+  - onResizeStart: Función callback para iniciar el redimensionamiento
+
  */
 
 import { useRef } from 'react';
@@ -44,63 +40,45 @@ import { Card } from '../ui/card';
 import { Badge } from '../ui/badge';
 
 /**
- * Interfaz que define la estructura de un elemento (escritorio u objeto)
- * Representa cada item que puede ser放置 (colocado) en el mapa
+ Interfaz que define la estructura de un elemento (escritorio u objeto)
+representa cada item que puede ser (colocado) en el mapa
  */
 interface DeskItem {
-  /** Identificador único del elemento */
-  id: string;
-  /** Posición X del elemento en el canvas */
-  x: number;
-  /** Posición Y del elemento en el canvas */
-  y: number;
-  /** Ancho del elemento en píxeles */
-  width: number;
-  /** Alto del elemento en píxeles */
-  height: number;
-  /** Tipo de elemento ('desk', 'zone', 'frame', 'store', 'management', 'entrance') */
-  type: string;
-  /** Indica si el elemento está colocado en el mapa */
-  placed: boolean;
-  /** Indica si el elemento tiene reportes activos (opcional) */
-  hasReport?: boolean;
-  /** Indica si es un objeto por defecto */
-  isDefault?: boolean;
+  id: string;/** Identificador único del elemento */
+  x: number;/** Posición X del elemento en el canvas */
+  y: number; /** Posición Y del elemento en el canvas */
+  width: number;  /** Ancho del elemento en píxeles */
+  height: number; /** Alto del elemento en píxeles */
+  type: string; /** Tipo de elemento ('desk', 'zone', 'frame', 'store', 'management', 'entrance') */
+  placed: boolean;/** Indica si el elemento está colocado en el mapa */
+  hasReport?: boolean;   /** Indica si el elemento tiene reportes activos (opcional) */
+  isDefault?: boolean;/** Indica si es un objeto por defecto */
 }
 
 /**
- * Interfaz de props para el componente MapCanvas
- * Define todos los parámetros que el componente padre debe proporcionar
+  Interfaz de props para el componente MapCanvas
+ Define todos los parámetros que el componente padre debe proporcionar
  */
 interface MapCanvasProps {
-  /** Array de elementos que ya están colocados en el mapa (escritorios) */
-  items: DeskItem[];
-  /** Array de capas de fondo (zonas, marcos) */
-  bgLayers: DeskItem[];
-  /** Array de elementos pendientes (sin colocar) */
-  inventory: DeskItem[];
-  /** Ancho del canvas SVG en píxeles */
-  CANVAS_WIDTH: number;
-  /** Alto del canvas SVG en píxeles */
-  CANVAS_HEIGHT: number;
-  /** Callback ejecutado cuando se suelta un elemento arrastrado sobre el canvas */
-  onDrop: (e: React.DragEvent) => void;
-  /** Callback ejecutado cuando el mouse se mueve sobre el canvas */
-  onMouseMove: (e: React.MouseEvent) => void;
-  /** Callback ejecutado cuando se hace clic en un elemento del mapa */
-  onMouseDown: (id: string) => void;
-  /** Callback ejecutado cuando se inicia el redimensionamiento */
-  onResizeStart?: (id: string) => void;
-  /** Callback ejecutado cuando se elimina un elemento */
-  onDeleteItem?: (id: string) => void;
-  /** Escala de zoom del canvas */
-  scale?: number;
+  
+  items: DeskItem[]; /** Array de elementos que ya están colocados en el mapa (escritorios) */
+  bgLayers: DeskItem[]; /** Array de capas de fondo (zonas, marcos) */
+  inventory: DeskItem[]; /** Array de elementos pendientes (sin colocar) */
+  CANVAS_WIDTH: number; /** Ancho del canvas SVG en píxeles */
+  CANVAS_HEIGHT: number;/** Alto del canvas SVG en píxeles */
+  onDrop: (e: React.DragEvent) => void; /** Callback ejecutado cuando se suelta un elemento arrastrado sobre el canvas */
+  onMouseMove: (e: React.MouseEvent) => void; /** Callback ejecutado cuando el mouse se mueve sobre el canvas */
+  onMouseDown: (id: string) => void; /** Callback ejecutado cuando se hace clic en un elemento del mapa */
+  onResizeStart?: (id: string) => void;   /** Callback ejecutado cuando se inicia el redimensionamiento */
+  onDeleteItem?: (id: string) => void; /** Callback ejecutado cuando se elimina un elemento */
+  scale?: number;/** Escala de zoom del canvas */
 }
 
 /**
- * Función para obtener el color de relleno según el tipo de elemento
- * Cada tipo de elemento tiene un color distintivo para mejor visualización
+ Función para obtener el color de relleno según el tipo de elemento
+ Cada tipo de elemento tiene un color distintivo para mejor visualización
  */
+
 const getFillColor = (item: DeskItem): string => {
   // Si es un escritorio con reporte activo, mostrar en rojo
   if (item.type === 'desk' && item.hasReport) {
@@ -128,11 +106,11 @@ const getFillColor = (item: DeskItem): string => {
 };
 
 /**
- * Componente funcional que renderiza el canvas del mapa de oficinas
- * Utiliza SVG para dibujar la cuadrícula y los elementos placed
- * 
- * @param props - Propiedades del componente conteniendo datos y handlers
- * @returns JSX.Element - Componente canvas con elementos SVG
+  Componente funcional que renderiza el canvas del mapa de oficinas
+  Utiliza SVG para dibujar la cuadrícula y los elementos placed
+  
+  @param props - Propiedades del componente conteniendo datos y handlers
+  @returns JSX.Element - Componente canvas con elementos SVG
  */
 export default function MapCanvas({
   items,
@@ -151,7 +129,7 @@ export default function MapCanvas({
   const svgRef = useRef<SVGSVGElement>(null);
 
   return (
-    // Contenedor principal: Card que ocupa el espacio restante (flex-1)
+    // Contenedor principal: Card que ocupa el espacio restante (flex-1), con fondo blanco y sombra interna y overflow oculto para evitar scrolls no deseados
     <Card className="flex-1 relative overflow-hidden bg-white shadow-inner">
       
       {/* Badges superiores derechos: contadores de elementos */}
@@ -244,7 +222,7 @@ export default function MapCanvas({
                 fill="white"
                 className="text-xs font-bold pointer-events-none select-none"
               >
-                ×
+                X
               </text>
 
               {/* Handle de redimensionamiento (esquina inferior derecha) */}
@@ -311,7 +289,7 @@ export default function MapCanvas({
                 fill="white"
                 className="text-xs font-bold pointer-events-none select-none"
               >
-                ×
+                x
               </text>
 
               {/* Handle de redimensionamiento (esquina inferior derecha) */}

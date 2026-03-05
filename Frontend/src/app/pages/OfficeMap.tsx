@@ -1,50 +1,50 @@
 /**
- * Página: OfficeMap
- * 
- * Descripción:
- * Este es el componente principal de la página del mapa de oficinas (Office Map).
- * Actúa como contenedor que orquesta todos los subcomponentes y gestiona el estado
- * global de la aplicación de mapas de escritorios.
- * 
- * Esta página permite:
- * - Visualizar un mapa interactivo de la oficina con escritorios
- * - Arrastrar y soltar (drag-and-drop) escritorios desde el sidebar al mapa
- * - Importar datos de escritorios desde archivos CSV
- * - Buscar y filtrar elementos en el inventario
- * - Rotar y posicionar elementos en el canvas
- * - Ver estadísticas en tiempo real sobre los escritorios
- * 
- * Estructura de componentes:
- * 1. OfficeMapHeader - Encabezado con título y navegación
- * 2. StatsCards - Tarjetas de estadísticas (total, con reportes, sin problemas)
- * 3. MapLegend - Leyenda de colores del mapa
- * 4. MapSidebar - Panel lateral con inventario y herramientas
- * 5. MapCanvas - Área principal del mapa con elementos SVG
- * 6. TipBox - Caja de consejos para el usuario
- * 
- * Estados (State Management):
- * - search: Valor del campo de búsqueda
- * - desks: Array de todos los escritorios/objetos
- * - activeTab: Pestaña activa en el sidebar (inventory/objects)
- * - draggingId: ID del elemento actualmente siendo arrastrado
- * - resizingId: ID del elemento actualmente siendo redimensionado
- * 
+ Página: OfficeMap
+ 
+ Descripción:
+ Este es el componente principal de la página del mapa de oficinas (Office Map).
+ Actúa como contenedor que orquesta todos los subcomponentes y gestiona el estado
+ global de la aplicación de mapas de escritorios.
+ 
+ Esta página permite:
+ - Visualizar un mapa interactivo de la oficina con escritorios
+ - Arrastrar y soltar (drag-and-drop) escritorios desde el sidebar al mapa
+ - Importar datos de escritorios desde archivos CSV
+- Buscar y filtrar elementos en el inventario
+ - Rotar y posicionar elementos en el canvas
+ - Ver estadísticas en tiempo real sobre los escritorios
+ 
+ Estructura de componentes:
+ 1. OfficeMapHeader - Encabezado con título y navegación
+ 2. StatsCards - Tarjetas de estadísticas (total, con reportes, sin problemas)
+ 3. MapLegend - Leyenda de colores del mapa
+ 4. MapSidebar - Panel lateral con inventario y herramientas 
+ 5. MapCanvas - Área principal del mapa con elementos SVG
+ 6. TipBox - Caja de consejos para el usuario
+ 
+ Estados (State Management):
+ - search: Valor del campo de búsqueda
+ - desks: Array de todos los escritorios/objetos
+ - activeTab: Pestaña activa en el sidebar (inventory/objects)
+ - draggingId: ID del elemento actualmente siendo arrastrado
+ - resizingId: ID del elemento actualmente siendo redimensionado
+ 
  * Handlers:
- * - handleFileUpload: Procesa archivos CSV subidos por el usuario
- * - rotateItem: Rota un elemento intercambiando width y height
- * - handleSvgDrop: Maneja el evento de soltar un elemento en el canvas
- * - handleMouseMove: Maneja el movimiento del mouse para arrastrar/redimensionar
- * - handleMouseUp: Finaliza las operaciones de arrastre/redimensionado
- * - handleCanvasMouseDown: Inicia el arrastre de un elemento en el mapa
- * 
- * Constantes:
- * - CANVAS_WIDTH: Ancho del área del mapa (2400px)
- * - CANVAS_HEIGHT: Alto del área del mapa (5000px)
- * - defaultObjects: Objetos por defecto disponibles para agregar al mapa
- * 
- * Dependencias:
- * - react: use_state, useRef para gestión de estado
- * - ../components/OfficeMap: Subcomponentes del mapa de oficinas
+ - handleFileUpload: Procesa archivos CSV subidos por el usuario
+ - rotateItem: Rota un elemento intercambiando width y height
+ - handleSvgDrop: Maneja el evento de soltar un elemento en el canvas
+ - handleMouseMove: Maneja el movimiento del mouse para arrastrar/redimensionar
+ - handleMouseUp: Finaliza las operaciones de arrastre/redimensionado
+ - handleCanvasMouseDown: Inicia el arrastre de un elemento en el mapa
+ 
+ Constantes:
+- CANVAS_WIDTH: Ancho del área del mapa (2400px)
+ - CANVAS_HEIGHT: Alto del área del mapa (5000px)
+ - defaultObjects: Objetos por defecto disponibles para agregar al mapa
+ 
+ Dependencias:
+ - react: use_state, useRef para gestión de estado
+ - ../components/OfficeMap: Subcomponentes del mapa de oficinas
  */
 
 import { useState, useRef } from 'react';
@@ -86,7 +86,7 @@ export default function OfficeMap() {
   const CANVAS_WIDTH = 2400;
   const CANVAS_HEIGHT = 5000;
 
-  // 📊 Stats
+  //Las estadisticas se calculan en base al estado actual de los escritorios, filtrando por tipo y reportes
   const totalDesks = desks.filter(d => d.type === 'desk').length;
   const reports = desks.filter(d => d.hasReport).length;
   const noIssues = desks.filter(d => d.type === 'desk' && !d.hasReport).length;
