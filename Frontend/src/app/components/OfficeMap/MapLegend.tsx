@@ -32,7 +32,6 @@ export default function MapLegend({ onModeChange, onBackToMenu }: MapLegendProps
   const [selectedSeat, setSelectedSeat] = useState('');
 
   // Example data
-  const availableMaps = ['Floor 1', 'Floor 2', 'Floor 3'];
   const floors = ['Floor 1', 'Floor 2', 'Floor 3', 'Floor 4'];
   const seats = ['Main Headquarters', 'South Headquarters', 'North Headquarters'];
 

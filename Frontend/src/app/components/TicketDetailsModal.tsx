@@ -9,7 +9,7 @@ import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Separator } from '../components/ui/separator';
 import { Ticket, TicketStatus, TicketCategory } from '../types/ticket';
-import { Clock, User, Tag, AlertCircle, MessageSquare, MapPin } from 'lucide-react';
+import { Clock, User, Tag, MessageSquare, MapPin, Wrench } from 'lucide-react';
 
 interface TicketDetailsModalProps {
   ticket: Ticket;
@@ -35,23 +35,10 @@ const statusColors: Record<TicketStatus, string> = {
   resolved: 'bg-green-100 text-green-800',
 };
 
-const priorityColors = {
-  low: 'bg-gray-100 text-gray-800',
-  medium: 'bg-orange-100 text-orange-800',
-  high: 'bg-red-100 text-red-800',
-};
-
-const priorityLabels = {
-  low: 'Low',
-  medium: 'Medium',
-  high: 'High',
-};
-
 const technicians = [
-  { id: 'tech-1', name: 'Carlos Rodríguez' },
-  { id: 'tech-2', name: 'Laura Martínez' },
-  { id: 'tech-3', name: 'Pedro Sánchez' },
-  { id: 'tech-4', name: 'Sofia Torres' },
+  { id: '1', name: 'Camilo' },
+  { id: '2', name: 'Andres' },
+  { id: '3', name: 'Jose' },
 ];
 
 export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketDetailsModalProps) {
@@ -68,7 +55,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
     const tech = technicians.find((t) => t.id === techId);
     updateTicket(ticket.id, {
       assignedTo: techId,
-      assignedToName: tech?.name,
+      assignedToName: tech?.name, 
     });
   };
 
@@ -97,7 +84,6 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
     }).format(new Date(date));
   };
 
-  // Filter comments based on user role
   const visibleComments = isAdmin
     ? ticket.comments
     : ticket.comments.filter((c) => !c.isInternal);
@@ -126,15 +112,6 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2 text-sm text-gray-600">
-                <AlertCircle className="w-4 h-4" />
-                Priority
-              </div>
-              <Badge className={priorityColors[ticket.priority]}>
-                {priorityLabels[ticket.priority]}
-              </Badge>
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
                 <User className="w-4 h-4" />
                 Created by
               </div>
@@ -142,8 +119,17 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Wrench className="w-4 h-4" />
+                Technician
+              </div>
+              <div className="font-medium">
+                {ticket.assignedToName || 'Unassigned'}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
                 <Clock className="w-4 h-4" />
-                Date & Time
+                Date
               </div>
               <div className="font-medium text-sm">
                 {formatDateTime(ticket.createdAt)}
@@ -151,7 +137,6 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
             </div>
           </div>
 
-          {/* Location */}
           {ticket.location && (
             <div className="space-y-1">
               <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -162,7 +147,6 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
             </div>
           )}
 
-          {/* Description */}
           <div>
             <h3 className="font-semibold mb-2">Description</h3>
             <p className="text-gray-700 bg-gray-50 p-4 rounded-md">
@@ -219,31 +203,23 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
             
             <div className="space-y-4 mb-4">
               {visibleComments.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">
-                  No comments yet
-                </p>
+                <p className="text-gray-500 text-center py-4">No comments yet</p>
               ) : (
                 visibleComments.map((c) => (
                   <div
                     key={c.id}
                     className={`p-4 rounded-lg ${
-                      c.isInternal
-                        ? 'bg-amber-50 border border-amber-200'
-                        : 'bg-gray-50'
+                      c.isInternal ? 'bg-amber-50 border border-amber-200' : 'bg-gray-50'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{c.userName}</span>
                         {c.isInternal && (
-                          <Badge variant="outline" className="text-xs">
-                            Internal note
-                          </Badge>
+                          <Badge variant="outline" className="text-xs">Internal note</Badge>
                         )}
                       </div>
-                      <span className="text-sm text-gray-500">
-                        {formatDateTime(c.createdAt)}
-                      </span>
+                      <span className="text-sm text-gray-500">{formatDateTime(c.createdAt)}</span>
                     </div>
                     <p className="text-gray-700">{c.content}</p>
                   </div>
@@ -267,7 +243,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                       type="checkbox"
                       checked={isInternalNote}
                       onChange={(e) => setIsInternalNote(e.target.checked)}
-                      className="rounded"
+                      className="rounded border-gray-300"
                     />
                     <span>Internal note (visible only to admins)</span>
                   </label>
@@ -282,9 +258,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
           <Separator />
 
           <div className="flex justify-end">
-            <Button variant="outline" onClick={onClose}>
-              Close
-            </Button>
+            <Button variant="outline" onClick={onClose}>Close</Button>
           </div>
         </div>
       </DialogContent>
