@@ -9,7 +9,6 @@ import Register from "./app/pages/Register";
 import OfficeMap from "./app/pages/OfficeMap";
 import { Toaster } from "sonner"; 
 
-
 function App() {
   return (
     <AuthProvider>
