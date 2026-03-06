@@ -1,23 +1,24 @@
 /**
- Componente: OfficeMapHeader
- 
- Descripción:
- Este componente representa el encabezado de la página del mapa de oficinas.
- Muestra el título de la página, un subtítulo descriptivo y un botón para
- regresar al dashboard anterior.
- 
- Funcionalidades:
- - Visualización del título principal de la página
- - Subtítulo informativo sobre el propósito de la página - Botón de navegación para regresar a la página anterior usando useNavigate
- 
- Props:
- - title (opcional): Título principal a mostrar. Por defecto: "Office Map - Desk Layout"
- - subtitle (opcional): Subtítulo descriptivo. Por defecto: "Overview of all desks and active reports"
- 
- Dependencias:
- - react-router: useNavigate para la navegación
- - lucide-react: Iconos (ArrowLeft)
- - ../ui/button: Componente Button reutilizable
+ * Componente: OfficeMapHeader
+ * 
+ * Descripción:
+ * Este componente representa el encabezado de la página del mapa de oficinas.
+ * Muestra el título de la página, un subtítulo descriptivo y un botón para
+ * regresar al dashboard anterior.
+ * 
+ * Funcionalidades:
+ * - Visualización del título principal de la página
+ * - Subtítulo informativo sobre el propósito de la página
+ * - Botón de navegación para regresar a la página anterior usando useNavigate
+ * 
+ * Props:
+ * - title (opcional): Título principal a mostrar. Por defecto: "Office Map - Desk Layout"
+ * - subtitle (opcional): Subtítulo descriptivo. Por defecto: "Overview of all desks and active reports"
+ * 
+ * Dependencias:
+ * - react-router: useNavigate para la navegación
+ * - lucide-react: Iconos (ArrowLeft)
+ * - ../ui/button: Componente Button reutilizable
  */
 
 import { useNavigate } from 'react-router';
@@ -25,8 +26,8 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '../ui/button';
 
 /**
- Interfaz de props para el componente OfficeMapHeader
- Define los parámetros opcionales que puede recibir el componente
+ * Interfaz de props para el componente OfficeMapHeader
+ * Define los parámetros opcionales que puede recibir el componente
  */
 interface OfficeMapHeaderProps {
   /** Título principal de la página */
@@ -36,9 +37,9 @@ interface OfficeMapHeaderProps {
 }
 
 /**
- Componente funcional que renderiza el encabezado del mapa de oficinas
- @param props - Propiedades del componente (title, subtitle)
- @returns JSX.Element - Elemento React con la estructura del encabezado
+ * Componente funcional que renderiza el encabezado del mapa de oficinas
+ * @param props - Propiedades del componente (title, subtitle)
+ * @returns JSX.Element - Elemento React con la estructura del encabezado
  */
 export default function OfficeMapHeader({ 
   title = "Office Map - Desk Layout", 

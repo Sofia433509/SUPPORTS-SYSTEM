@@ -23,10 +23,10 @@ export default function DeskMapImporter() {
       const csvContent = desksToCSV(desks);
       const timestamp = new Date().toISOString().split('T')[0];
       downloadCSV(csvContent, `office-layout-${timestamp}.csv`);
-      setSuccessMessage('Layout exported successfully');
+      setSuccessMessage('Layout exportado exitosamente');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
-      setValidationErrors(['Error exporting: ' + (error as Error).message]);
+      setValidationErrors(['Error al exportar: ' + (error as Error).message]);
     }
   };
 
@@ -36,7 +36,7 @@ export default function DeskMapImporter() {
 
     // Validar tipo de archivo
     if (!file.name.endsWith('.csv') && !file.name.endsWith('.txt')) {
-      setValidationErrors(['Please select a CSV or TXT file']);
+      setValidationErrors(['Por favor seleccione un archivo CSV o TXT']);
       return;
     }
 
@@ -72,7 +72,7 @@ export default function DeskMapImporter() {
       setPreviewDesks(sanitized);
 
     } catch (error) {
-      setValidationErrors(['Error processing file: ' + (error as Error).message]);
+      setValidationErrors(['Error al procesar archivo: ' + (error as Error).message]);
     } finally {
       setIsImporting(false);
       // Limpiar input
@@ -86,7 +86,7 @@ export default function DeskMapImporter() {
     if (!previewDesks) return;
 
     setDesks(previewDesks);
-    setSuccessMessage(`Updated layout: ${previewDesks.length} desks imported`);
+    setSuccessMessage(`Layout actualizado: ${previewDesks.length} escritorios importados`);
     setPreviewDesks(null);
     setValidationWarnings([]);
     
@@ -100,9 +100,9 @@ export default function DeskMapImporter() {
   };
 
   const handleResetToDefault = () => {
-    if (confirm('Are you sure you want to reset to the default configuration? All current changes will be lost.')) {
+    if (confirm('¿Está seguro de restaurar la configuración por defecto? Se perderán los cambios actuales.')) {
       resetToDefault();
-      setSuccessMessage('Layout reset to default configuration');
+      setSuccessMessage('Layout restaurado a configuración por defecto');
       setPreviewDesks(null);
       setValidationErrors([]);
       setValidationWarnings([]);
@@ -118,7 +118,7 @@ export default function DeskMapImporter() {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            <div className="font-semibold mb-2">Errors found:</div>
+            <div className="font-semibold mb-2">Errores encontrados:</div>
             <ul className="list-disc list-inside space-y-1">
               {validationErrors.map((error, index) => (
                 <li key={index} className="text-sm">{error}</li>
@@ -136,9 +136,9 @@ export default function DeskMapImporter() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-blue-900">Preview of Layout</CardTitle>
+                <CardTitle className="text-blue-900">Vista Previa del Layout</CardTitle>
                 <CardDescription className="text-blue-700">
-                  {previewDesks.length} desks ready for import
+                  {previewDesks.length} escritorios listos para importar
                 </CardDescription>
               </div>
               <Button variant="ghost" size="sm" onClick={handleCancelImport}>
@@ -170,10 +170,10 @@ export default function DeskMapImporter() {
             <div className="flex gap-2">
               <Button onClick={handleApplyImport} className="flex-1">
                 <CheckCircle className="w-4 h-4 mr-2" />
-                Apply Changes
+                Aplicar Cambios
               </Button>
               <Button variant="outline" onClick={handleCancelImport}>
-                Cancel
+                Cancelar
               </Button>
             </div>
           </CardContent>
@@ -183,9 +183,9 @@ export default function DeskMapImporter() {
       {/* Main Control Panel */}
       <Card>
         <CardHeader>
-          <CardTitle>Office Map Management</CardTitle>
+          <CardTitle>Gestión del Mapa de Oficina</CardTitle>
           <CardDescription>
-            Import, export, or restore the layout configuration of desks
+            Importar, exportar o restaurar la configuración del layout de escritorios
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -193,12 +193,12 @@ export default function DeskMapImporter() {
           <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm text-gray-600">Current Configuration</div>
-                <div className="text-2xl font-bold text-gray-900">{desks.length} desks</div>
+                <div className="text-sm text-gray-600">Configuración Actual</div>
+                <div className="text-2xl font-bold text-gray-900">{desks.length} escritorios</div>
               </div>
               <Badge variant="outline" className="text-sm">
                 <FileText className="w-3 h-3 mr-1" />
-                Active
+                Activo
               </Badge>
             </div>
           </div>
@@ -226,16 +226,16 @@ export default function DeskMapImporter() {
               </Button>
             </div>
 
-            {/* Exportar Button */}
+            {/* Export Button */}
             <Button onClick={handleExportCSV} variant="outline" className="w-full">
               <Download className="w-4 h-4 mr-2" />
-              Export CSV
+              Exportar CSV
             </Button>
 
-            {/* Resetar Button */}
+            {/* Reset Button */}
             <Button onClick={handleResetToDefault} variant="outline" className="w-full">
               <RotateCcw className="w-4 h-4 mr-2" />
-              Reset to Default
+              Restaurar Default
             </Button>
           </div>
         </CardContent>

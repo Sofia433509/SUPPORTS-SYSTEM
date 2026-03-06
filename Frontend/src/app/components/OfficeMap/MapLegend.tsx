@@ -46,7 +46,7 @@ export default function MapLegend({ onModeChange, onBackToMenu }: MapLegendProps
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Funciones del menú desplegable
+  // Funciones del menú
   const handleAddMap = () => {
     setAddMapModal(true);
     setIsOpen(false);
@@ -89,7 +89,7 @@ export default function MapLegend({ onModeChange, onBackToMenu }: MapLegendProps
       <Card className="relative overflow-visible z-40 shadow-md border border-gray-200">
         <CardContent className="flex flex-wrap items-center gap-6 py-4 pr-12">
           
-          {/* Indicadores existentes del mapeado*/}
+          {/* Indicadores existentes */}
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-green-500 border border-gray-300 rounded shadow-sm"></div>
             <span className="text-sm font-medium text-gray-700">No issues</span>
@@ -115,7 +115,7 @@ export default function MapLegend({ onModeChange, onBackToMenu }: MapLegendProps
             <span className="text-sm text-gray-500">Click on any desk to view details</span>
           </div>
 
-          {/* MENÚ DESPLEGABLE MEJORADO  */}
+          {/* --- MENÚ DESPLEGABLE MEJORADO --- */}
           <div className="absolute right-4 top-1/2 -translate-y-1/2" ref={menuRef}>
             <button 
               onClick={() => setIsOpen(!isOpen)}
@@ -128,7 +128,7 @@ export default function MapLegend({ onModeChange, onBackToMenu }: MapLegendProps
             >
               <MoreVertical size={24} strokeWidth={2} />
             </button>
-            {/*Opcion de agregar un mapa, editarlo, eliminarlo y observarlo*/ }
+
             {isOpen && (
               <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl z-[9999] py-2 border border-gray-200 overflow-hidden">
                 <button 
@@ -136,7 +136,7 @@ export default function MapLegend({ onModeChange, onBackToMenu }: MapLegendProps
                   onClick={handleAddMap}
                 >
                   <Plus size={18} className="text-blue-500 flex-shrink-0" /> 
-                  <span>Add Map</span> 
+                  <span>Add Map</span>
                 </button>
                 
                 <button 

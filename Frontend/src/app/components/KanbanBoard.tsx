@@ -1,47 +1,34 @@
 import React, { useState } from 'react';
-import { DndProvider } from 'react-dnd'; 
-import { HTML5Backend } from 'react-dnd-html5-backend'; 
-import { useDrop } from 'react-dnd'; 
-import { useTickets } from '../context/TicketContext'; 
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
+import { useDrop } from 'react-dnd';
+import { useTickets } from '../context/TicketContext';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Badge } from '../components/ui/badge';
 import { Ticket, TicketStatus, TicketCategory } from '../types/ticket';
-import TicketCard from './TicketCard'; 
-import TicketDetailsModal from './TicketDetailsModal'; 
-import { Filter } from 'lucide-react'; 
+import TicketCard from './TicketCard';
+import TicketDetailsModal from './TicketDetailsModal';
+import { Filter } from 'lucide-react';
 
-/**
- Props del componente DropZone
- Representa una columna del Kanban (Pending / In Progress / Resolved)
- */
 interface DropZoneProps {
-  status: TicketStatus; // Estado de la columna
-  tickets: Ticket[]; // Tickets que pertenecen a ese estado
-  onDrop: (ticketId: string, newStatus: TicketStatus) => void; // Acción cuando se suelta un ticket
-  onTicketClick: (ticket: Ticket) => void; // Acción al hacer clic en un ticket
-  allowDrop: boolean; // Permite o bloquea el drag & drop (según rol)
+  status: TicketStatus;
+  tickets: Ticket[];
+  onDrop: (ticketId: string, newStatus: TicketStatus) => void;
+  onTicketClick: (ticket: Ticket) => void;
+  allowDrop: boolean;
 }
 
-/**
- Componente DropZone
- Representa una columna del tablero Kanban
- */
 function DropZone({ status, tickets, onDrop, onTicketClick, allowDrop }: DropZoneProps) {
-
-  // Hook de react-dnd que convierte el contenedor en una zona de drop
   const [{ isOver }, drop] = useDrop(() => ({
-    accept: 'TICKET', // Tipo de elemento que puede soltarse
+    accept: 'TICKET',
     drop: allowDrop ? (item: { id: string }) => onDrop(item.id, status) : undefined,
-
-    // Monitorea si un elemento está encima de la zona
     collect: (monitor) => ({
       isOver: allowDrop ? monitor.isOver() : false,
     }),
   }));
 
-  // Configuración visual para cada estado
   const statusConfig = {
     pending: {
       title: 'Pending',
@@ -64,25 +51,21 @@ function DropZone({ status, tickets, onDrop, onTicketClick, allowDrop }: DropZon
 
   return (
     <div
-      ref={drop} // conecta el contenedor con el sistema de drop
+      ref={drop}
       className={`flex-1 min-h-[600px] transition-colors ${
-        isOver ? 'bg-blue-50' : '' // cambia color si un ticket está encima
+        isOver ? 'bg-blue-50' : ''
       }`}
     >
       <Card className={`h-full ${config.color}`}>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center justify-between">
             <span>{config.title}</span>
-
-            {/* Badge con cantidad de tickets */}
             <Badge className={config.badge + ' text-white'}>
               {tickets.length}
             </Badge>
           </CardTitle>
         </CardHeader>
-
         <CardContent className="space-y-3">
-          {/* Renderizar tickets */}
           {tickets.map((ticket) => (
             <TicketCard
               key={ticket.id}
@@ -90,8 +73,6 @@ function DropZone({ status, tickets, onDrop, onTicketClick, allowDrop }: DropZon
               onClick={() => onTicketClick(ticket)}
             />
           ))}
-
-          {/* Mensaje cuando no hay tickets */}
           {tickets.length === 0 && (
             <div className="text-center py-8 text-gray-400 text-sm">
               No tickets
@@ -103,55 +84,28 @@ function DropZone({ status, tickets, onDrop, onTicketClick, allowDrop }: DropZon
   );
 }
 
-
-/**
- Componente principal KanbanBoard
- Maneja:
- - filtros
- - drag & drop
- - agrupación por estado
- */
 export default function KanbanBoard() {
-
-  // Obtener tickets y función para actualizar desde el contexto
   const { tickets, updateTicket } = useTickets();
-
-  // Obtener usuario autenticado
   const { user } = useAuth();
-
   const role = user?.role ?? '';
-
-  // Verificar si el usuario es IT (admin)
   const isIT = role.toLowerCase() === 'it';
 
-  // Estado del ticket seleccionado (para abrir modal)
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
-
-  // Estado del filtro de categoría
   const [categoryFilter, setCategoryFilter] = useState<TicketCategory | 'all'>('all');
 
-  /**
-Maneja el drop de un ticket en otra columna
-   */
   const handleDrop = (ticketId: string, newStatus: TicketStatus) => {
-
-    // Solo IT puede cambiar estados
     if (isIT) {
       updateTicket(ticketId, { status: newStatus });
     }
   };
 
-  /**
-Filtrar tickets por categoría
-   */
+  // Filtrar tickets por categoría
   const filteredTickets =
     categoryFilter === 'all'
       ? tickets
       : tickets.filter((t) => t.category === categoryFilter);
 
-  /**
-Agrupar tickets por estado para el Kanban
-   */
+  // Agrupar por estado
   const ticketsByStatus = {
     pending: filteredTickets.filter((t) => t.status === 'pending'),
     'in-progress': filteredTickets.filter((t) => t.status === 'in-progress'),
@@ -161,33 +115,22 @@ Agrupar tickets por estado para el Kanban
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="space-y-6">
-
-        {/* Filtros */}
+        {/* Filters */}
         {isIT && (
           <Card>
             <CardContent className="py-4">
               <div className="flex items-center gap-4">
-
-                {/* Icono de filtro */}
                 <div className="flex items-center gap-2">
                   <Filter className="w-4 h-4 text-gray-600" />
-                  <span className="text-sm font-medium">
-                    Filter by category:
-                  </span>
+                  <span className="text-sm font-medium">Filter by category:</span>
                 </div>
-
-                {/* Selecciona
-           categoría */}
                 <Select
                   value={categoryFilter}
-                  onValueChange={(value) =>
-                    setCategoryFilter(value as TicketCategory | 'all')
-                  }
+                  onValueChange={(value) => setCategoryFilter(value as TicketCategory | 'all')}
                 >
                   <SelectTrigger className="w-48">
                     <SelectValue />
                   </SelectTrigger>
-
                   <SelectContent>
                     <SelectItem value="all">All categories</SelectItem>
                     <SelectItem value="hardware">Hardware</SelectItem>
@@ -195,8 +138,6 @@ Agrupar tickets por estado para el Kanban
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
-
-                {/* Total de tickets */}
                 <div className="text-sm text-gray-600">
                   Total: {filteredTickets.length} tickets
                 </div>
@@ -205,9 +146,8 @@ Agrupar tickets por estado para el Kanban
           </Card>
         )}
 
-        {/* Tablero Kanban */}
+        {/* Kanban Board */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
           <DropZone
             status="pending"
             tickets={ticketsByStatus.pending}
@@ -215,7 +155,6 @@ Agrupar tickets por estado para el Kanban
             onTicketClick={setSelectedTicket}
             allowDrop={isIT}
           />
-
           <DropZone
             status="in-progress"
             tickets={ticketsByStatus['in-progress']}
@@ -223,7 +162,6 @@ Agrupar tickets por estado para el Kanban
             onTicketClick={setSelectedTicket}
             allowDrop={isIT}
           />
-
           <DropZone
             status="resolved"
             tickets={ticketsByStatus.resolved}
@@ -233,7 +171,7 @@ Agrupar tickets por estado para el Kanban
           />
         </div>
 
-        {/* Instrucciones */}
+        {/* Instructions */}
         <Card className="bg-blue-50 border-blue-200">
           <CardContent className="py-3">
             <p className="text-sm text-blue-800">
@@ -243,7 +181,7 @@ Agrupar tickets por estado para el Kanban
         </Card>
       </div>
 
-      {/* Modal de detalles del ticket */}
+      {/* Details modal */}
       {selectedTicket && (
         <TicketDetailsModal
           ticket={selectedTicket}
