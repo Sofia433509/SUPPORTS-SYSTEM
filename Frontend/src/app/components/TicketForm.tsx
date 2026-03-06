@@ -7,6 +7,7 @@ import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { TicketCategory } from '../types/ticket';
+import { toast } from 'sonner'; // Importamos toast para las notificaciones
 
 interface TicketFormProps {
   onClose: () => void;
@@ -34,13 +35,16 @@ export default function TicketForm({ onClose, userId, userName }: TicketFormProp
     ...Array.from({ length: 7 }, (_, i) => `E-${String(i + 1).padStart(3, '0')}`),
   ];
 
+  // Función para manejar el envío del formulario
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validar que los campos requeridos no estén vacíos
     if (!title.trim() || !description.trim()) {
       return;
     }
 
+    // Crear el nuevo ticket
     addTicket({
       title,
       description,
@@ -54,6 +58,13 @@ export default function TicketForm({ onClose, userId, userName }: TicketFormProp
       assignedTo: assignedTo || undefined
     });
 
+    // Mostrar notificación de éxito
+    toast.success('Ticket created successfully', {
+      description: `The ticket "${title}" has been created successfully`,
+      duration: 5000,
+    });
+
+    // Cerrar el formulario
     onClose();
   };
 

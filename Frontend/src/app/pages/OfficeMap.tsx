@@ -56,6 +56,7 @@ import {
   MapCanvas, 
   TipBox 
 } from '../components/OfficeMap';
+import { toast } from 'sonner'; // Importamos toast para las notificaciones
 
 // Objetos por defecto disponibles para agregar al mapa
 // Incluye zonas, marcos, áreas de tienda, gestión y entrada
@@ -115,16 +116,28 @@ export default function OfficeMap() {
       });
 
       setDesks(prev => [...prev, ...parsed]);
+      
+      // Notificación de éxito al importar CSV
+      toast.success('CSV imported correctly', {
+        description: `${parsed.length} desks have been imported`,
+        duration: 5000,
+      });
     };
 
     reader.readAsText(file);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  // Función para rotar un elemento (intercambia width por height)
   const rotateItem = (id: string) => {
     setDesks(prev => 
       prev.map(d => d.id === id ? { ...d, width: d.height, height: d.width } : d)
     );
+    // Notificación de éxito al rotar
+    toast.success('Element rotated', {
+      description: 'The element has been rotated 90 degrees',
+      duration: 3000,
+    });
   };
 
   const handleSvgDrop = (e: React.DragEvent) => {
@@ -146,6 +159,11 @@ export default function OfficeMap() {
         placed: true
       };
       setDesks(prev => [...prev, newObj]);
+      // Notificación de éxito al agregar elemento
+      toast.success('Element added', {
+        description: `The element ${data.id} has been added to the map`,
+        duration: 3000,
+      });
     } else {
       setDesks(prev =>
         prev.map(d =>
