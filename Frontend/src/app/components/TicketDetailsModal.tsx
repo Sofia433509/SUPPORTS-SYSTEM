@@ -42,10 +42,65 @@ const technicians = [
 ];
 
 export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketDetailsModalProps) {
+  // Validar campos esenciales (antes de los useState)
+  const safeCreatedAt = ticket.createdAt ? new Date(ticket.createdAt) : new Date();
+  const safeComments = Array.isArray(ticket.comments) ? ticket.comments : [];
+  const safeAssignedToName = ticket.assignedToName || 'Unassigned';
+  const safeCategory = ticket.category || 'other';
+  const safeStatus = ticket.status || 'pending';
+  const safeTitle = ticket.title || 'Sin título';
+  const safeDescription = ticket.description || 'Sin descripción';
+  const safeCreatedByName = ticket.createdByName || 'Desconocido';
+  const safeLocation = ticket.location || '';
+
+  const [editMode, setEditMode] = useState(false);
+  const [editTitle, setEditTitle] = useState(safeTitle);
+  const [editDescription, setEditDescription] = useState(safeDescription);
+  const [editPriority, setEditPriority] = useState(ticket.priority || 'low');
+  const [editCategory, setEditCategory] = useState(safeCategory);
+  const [editLocation, setEditLocation] = useState(safeLocation);
+
+  const { deleteTicket } = useTickets();
+
+  const handleEditSave = () => {
+    updateTicket(ticket.id, {
+      title: editTitle,
+      description: editDescription,
+      priority: editPriority,
+      category: editCategory,
+      location: editLocation,
+    });
+    setEditMode(false);
+  };
+
+  const handleDelete = () => {
+    if (window.confirm('¿Seguro que quieres eliminar este ticket?')) {
+      deleteTicket(ticket.id);
+      onClose();
+    }
+  };
   const { user } = useAuth();
   const { updateTicket, addComment } = useTickets();
   const [comment, setComment] = useState('');
   const [isInternalNote, setIsInternalNote] = useState(false);
+
+  // Validaciones defensivas para ticket
+  if (!ticket || typeof ticket !== 'object') {
+    return (
+      <Dialog open onOpenChange={onClose}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Error</DialogTitle>
+          </DialogHeader>
+          <div className="text-red-600 font-bold">No se pudo cargar la información del ticket.</div>
+          <div className="flex justify-end mt-6">
+            <Button variant="outline" onClick={onClose}>Cerrar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
 
   const handleStatusChange = (newStatus: TicketStatus) => {
     updateTicket(ticket.id, { status: newStatus });
@@ -55,7 +110,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
     const tech = technicians.find((t) => t.id === techId);
     updateTicket(ticket.id, {
       assignedTo: techId,
-      assignedToName: tech?.name, 
+      assignedToName: tech?.name || '',
     });
   };
 
@@ -65,7 +120,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
     addComment(ticket.id, {
       ticketId: ticket.id,
       userId: user?.id || '',
-      userName: user?.name || '',
+      userName: user?.name || user?.email || '',
       content: comment,
       isInternal: isInternalNote,
     });
@@ -81,21 +136,28 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-    }).format(new Date(date));
+    }).format(date instanceof Date ? date : new Date());
   };
 
   const visibleComments = isAdmin
-    ? ticket.comments
-    : ticket.comments.filter((c) => !c.isInternal);
+    ? safeComments
+    : safeComments.filter((c) => !c.isInternal);
 
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
-            <span>{ticket.title}</span>
-            <Badge className={statusColors[ticket.status]}>
-              {statusLabels[ticket.status]}
+            <span>{editMode ? (
+              <input
+                className="border rounded px-2 py-1 text-lg font-semibold"
+                value={editTitle}
+                onChange={e => setEditTitle(e.target.value)}
+                autoFocus
+              />
+            ) : safeTitle}</span>
+            <Badge className={statusColors[safeStatus]}>
+              {statusLabels[safeStatus]}
             </Badge>
           </DialogTitle>
         </DialogHeader>
@@ -108,14 +170,27 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                 <Tag className="w-4 h-4" />
                 Category
               </div>
-              <div className="font-medium">{categoryLabels[ticket.category]}</div>
+              {editMode ? (
+                <Select value={editCategory} onValueChange={(value) => setEditCategory(value as TicketCategory)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hardware">Hardware</SelectItem>
+                    <SelectItem value="software">Software</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="font-medium">{categoryLabels[safeCategory]}</div>
+              )}
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <User className="w-4 h-4" />
                 Created by
               </div>
-              <div className="font-medium">{ticket.createdByName}</div>
+              <div className="font-medium">{safeCreatedByName}</div>
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -123,7 +198,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                 Technician
               </div>
               <div className="font-medium">
-                {ticket.assignedToName || 'Unassigned'}
+                {safeAssignedToName}
               </div>
             </div>
             <div className="space-y-1">
@@ -132,27 +207,63 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                 Date
               </div>
               <div className="font-medium text-sm">
-                {formatDateTime(ticket.createdAt)}
+                {formatDateTime(safeCreatedAt)}
               </div>
             </div>
           </div>
 
-          {ticket.location && (
+          {editMode ? (
             <div className="space-y-1">
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <MapPin className="w-4 h-4" />
                 Desk Location
               </div>
-              <div className="font-medium">{ticket.location}</div>
+              <input
+                className="border rounded px-2 py-1"
+                value={editLocation}
+                onChange={e => setEditLocation(e.target.value)}
+              />
+            </div>
+          ) : safeLocation && (
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <MapPin className="w-4 h-4" />
+                Desk Location
+              </div>
+              <div className="font-medium">{safeLocation}</div>
             </div>
           )}
 
           <div>
             <h3 className="font-semibold mb-2">Description</h3>
-            <p className="text-gray-700 bg-gray-50 p-4 rounded-md">
-              {ticket.description}
-            </p>
+            {editMode ? (
+              <Textarea
+                value={editDescription}
+                onChange={e => setEditDescription(e.target.value)}
+                rows={4}
+              />
+            ) : (
+              <p className="text-gray-700 bg-gray-50 p-4 rounded-md">
+                {safeDescription}
+              </p>
+            )}
           </div>
+
+          {editMode && (
+            <div className="space-y-2">
+              <Label>Priority</Label>
+              <Select value={editPriority} onValueChange={(value) => setEditPriority(value as any)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Admin Controls */}
           {isAdmin && (
@@ -161,7 +272,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Change Status</Label>
-                  <Select value={ticket.status} onValueChange={(value) => handleStatusChange(value as TicketStatus)}>
+                  <Select value={safeStatus} onValueChange={(value) => handleStatusChange(value as TicketStatus)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -188,6 +299,26 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div className="flex gap-3 mt-4">
+                {!editMode ? (
+                  <Button variant="outline" onClick={() => setEditMode(true)}>
+                    Edit Ticket
+                  </Button>
+                ) : (
+                  <>
+                    <Button variant="default" onClick={handleEditSave}>
+                      Save Changes
+                    </Button>
+                    <Button variant="outline" onClick={() => setEditMode(false)}>
+                      Cancel
+                    </Button>
+                  </>
+                )}
+                <Button variant="destructive" onClick={handleDelete}>
+                  Delete Ticket
+                </Button>
               </div>
             </>
           )}

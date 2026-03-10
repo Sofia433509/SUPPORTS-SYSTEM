@@ -4,13 +4,37 @@ import { User, MoreVertical, Plus, Edit2, Eye, Home } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
+import { toast } from 'sonner';
+import { apiService } from '../../utils/api';
 
 interface MapLegendProps {
+  activeMode?: 'select' | 'add' | 'edit' | 'view';
   onModeChange?: (mode: 'add' | 'edit' | 'view') => void;
   onBackToMenu?: () => void;
+  onSaveMap?: (headquarters: string, floor: string) => Promise<void>;
+  onEditMap?: (headquarters: string, floor: string) => Promise<void>;
+  onLoadMap?: (headquarters: string, floor: string) => Promise<void>;
+  currentHeadquarters?: string;
+  currentFloor?: string;
+  setCurrentHeadquarters?: (value: string) => void;
+  setCurrentFloor?: (value: string) => void;
+  isExistingMap?: boolean;
 }
 
-export default function MapLegend({ onModeChange, onBackToMenu }: MapLegendProps) {
+export default function MapLegend({
+  activeMode,
+  onModeChange,
+  onBackToMenu,
+  onSaveMap,
+  onEditMap,
+  onLoadMap,
+  currentHeadquarters,
+  currentFloor,
+  setCurrentHeadquarters,
+  setCurrentFloor,
+  isExistingMap,
+}: MapLegendProps) {
+  const isViewMode = activeMode === 'view';
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -30,6 +54,7 @@ export default function MapLegend({ onModeChange, onBackToMenu }: MapLegendProps
   // Estados para ver mapa
   const [selectedFloor, setSelectedFloor] = useState('');
   const [selectedSeat, setSelectedSeat] = useState('');
+  const [savedMaps, setSavedMaps] = useState<{ headquarters: string; floor: string }[]>([]);
 
   // Example data
   const floors = ['Floor 1', 'Floor 2', 'Floor 3', 'Floor 4'];
@@ -62,26 +87,149 @@ export default function MapLegend({ onModeChange, onBackToMenu }: MapLegendProps
     setIsOpen(false);
   };
 
-  const handleConfirmAddMap = () => {
-    console.log('Map added:', { addSeat, addFloor });
-    setAddMapModal(false);
-    setAddSeat('');
-    setAddFloor('');
-    if (onModeChange) onModeChange('add');
-  };
 
-  const handleConfirmEditMap = () => {
-    console.log('Map edited:', { editSeat, editFloor });
-    setEditMapModal(false);
-    setEditSeat('');
-    setEditFloor('');
-    if (onModeChange) onModeChange('edit');
-  };
+  const handleConfirmViewMap = async () => {
+    if (!selectedSeat || !selectedFloor) {
+      toast.error('Selecciona sede y piso para ver el mapa');
+      return;
+    }
 
-  const handleConfirmViewMap = () => {
-    console.log('View map:', { selectedFloor, selectedSeat });
     setViewMapModal(false);
-    if (onModeChange) onModeChange('view');
+    if (onLoadMap) {
+      await onLoadMap(selectedSeat, selectedFloor);
+    }
+    if (onModeChange) {
+      onModeChange('view');
+    }
+  };
+
+  const handleGlobalSave = async () => {
+    if (!currentHeadquarters || !currentFloor) {
+      toast.error('Selecciona sede y piso antes de guardar');
+      return;
+    }
+
+    try {
+      if (isExistingMap && onEditMap) {
+        await onEditMap(currentHeadquarters, currentFloor);
+      } else if (onSaveMap) {
+        await onSaveMap(currentHeadquarters, currentFloor);
+      }
+      toast.success('Mapa guardado');
+    } catch (err) {
+      console.error('Error guardando mapa global:', err);
+      toast.error('Error guardando mapa');
+    }
+  };
+
+  // Estados para opciones dinámicas
+  const [hqOptions, setHqOptions] = useState<string[]>([]);
+  const [floorOptions, setFloorOptions] = useState<string[]>([]);
+
+  // Cargar opciones de headquarters, floors y mapas guardados al iniciar (o al abrir el modal)
+  useEffect(() => {
+    const loadOptions = async () => {
+      try {
+        const res = await apiService.getMapOptions();
+        setHqOptions(res.headquarters);
+        setFloorOptions(res.floors);
+        setSavedMaps(res.savedMaps ?? []);
+      } catch (err) {
+        // Si ocurre error, usar valores de ejemplo locales como fallback
+        setHqOptions(seats);
+        setFloorOptions(floors);
+        setSavedMaps([]);
+      }
+    };
+
+    if (addMapModal || editMapModal || viewMapModal) {
+      loadOptions();
+    }
+  }, [addMapModal, editMapModal, viewMapModal]);
+
+  // Setear metadata actual (usar en el botón Guardar global)
+  const setMetadataFromAdd = () => {
+    setCurrentHeadquarters?.(addSeat);
+    setCurrentFloor?.(addFloor);
+  };
+
+  const setMetadataFromEdit = () => {
+    setCurrentHeadquarters?.(editSeat);
+    setCurrentFloor?.(editFloor);
+  };
+
+  const handleSaveMap = async () => {
+    if (!addSeat || !addFloor) {
+      toast.error('Selecciona sede y piso');
+      return;
+    }
+
+    if (!onSaveMap) {
+      toast.error('Función de guardar no disponible');
+      return;
+    }
+
+    setMetadataFromAdd();
+
+    try {
+      await onSaveMap(addSeat, addFloor);
+      toast.success('Mapa guardado correctamente');
+      setAddMapModal(false);
+      setAddSeat('');
+      setAddFloor('');
+      if (onModeChange) onModeChange('add');
+    } catch (err) {
+      console.error('Error guardando mapa (frontend):', err);
+      toast.error('Error guardando mapa');
+    }
+  };
+
+  const handleLoadMapForEdit = async () => {
+    if (!editSeat || !editFloor) {
+      toast.error('Selecciona sede y piso');
+      return;
+    }
+
+    if (!onLoadMap) {
+      toast.error('Función de cargar no disponible');
+      return;
+    }
+
+    setMetadataFromEdit();
+
+    try {
+      await onLoadMap(editSeat, editFloor);
+      setEditMapModal(false);
+      setEditSeat('');
+      setEditFloor('');
+      if (onModeChange) onModeChange('edit');
+    } catch (err) {
+      console.error('Error cargando mapa (frontend):', err);
+      toast.error('Error cargando mapa');
+    }
+  };
+
+  const handleSaveEditMap = async () => {
+    if (!editSeat || !editFloor) {
+      toast.error('Selecciona sede y piso');
+      return;
+    }
+
+    if (!onEditMap) {
+      toast.error('Función de guardar no disponible');
+      return;
+    }
+
+    try {
+      await onEditMap(editSeat, editFloor);
+      setEditMapModal(false);
+      setEditSeat('');
+      setEditFloor('');
+      if (onModeChange) onModeChange('edit');
+    } catch (err) {
+      console.error('Error guardando mapa (frontend):', err);
+      toast.error('Error guardando mapa');
+    }
   };
 
   return (
@@ -114,6 +262,15 @@ export default function MapLegend({ onModeChange, onBackToMenu }: MapLegendProps
             <User className="w-4 h-4 text-blue-600" />
             <span className="text-sm text-gray-500">Click on any desk to view details</span>
           </div>
+          {!isViewMode && (
+            <Button
+              variant="secondary"
+              className="ml-4"
+              onClick={handleGlobalSave}
+            >
+              Guardar mapa
+            </Button>
+          )}
 
           {/* --- MENÚ DESPLEGABLE MEJORADO --- */}
           <div className="absolute right-4 top-1/2 -translate-y-1/2" ref={menuRef}>
@@ -131,21 +288,25 @@ export default function MapLegend({ onModeChange, onBackToMenu }: MapLegendProps
 
             {isOpen && (
               <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl z-[9999] py-2 border border-gray-200 overflow-hidden">
-                <button 
-                  className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 gap-3 transition-colors duration-150"
-                  onClick={handleAddMap}
-                >
-                  <Plus size={18} className="text-blue-500 flex-shrink-0" /> 
-                  <span>Add Map</span>
-                </button>
-                
-                <button 
-                  className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-green-50 gap-3 transition-colors duration-150"
-                  onClick={handleEditMap}
-                >
-                  <Edit2 size={18} className="text-green-500 flex-shrink-0" /> 
-                  <span>Edit Map</span>
-                </button>
+                {!isViewMode && (
+                  <>
+                    <button 
+                      className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 gap-3 transition-colors duration-150"
+                      onClick={handleAddMap}
+                    >
+                      <Plus size={18} className="text-blue-500 flex-shrink-0" /> 
+                      <span>Add Map</span>
+                    </button>
+                    
+                    <button 
+                      className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-green-50 gap-3 transition-colors duration-150"
+                      onClick={handleEditMap}
+                    >
+                      <Edit2 size={18} className="text-green-500 flex-shrink-0" /> 
+                      <span>Edit Map</span>
+                    </button>
+                  </>
+                )}
 
                 <button 
                   className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-purple-50 gap-3 transition-colors duration-150"
@@ -183,39 +344,49 @@ export default function MapLegend({ onModeChange, onBackToMenu }: MapLegendProps
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="addSeat">Select Headquarters</Label>
-              <select 
+              <input
+                list="hq-options"
                 id="addSeat"
                 value={addSeat}
-                onChange={(e) => setAddSeat(e.target.value)}
+                onChange={(e) => {
+                  setAddSeat(e.target.value);
+                  setCurrentHeadquarters?.(e.target.value);
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">-- Select a headquarters --</option>
-                {seats.map((seat) => (
-                  <option key={seat} value={seat}>{seat}</option>
+                placeholder="Select or type a headquarters"
+              />
+              <datalist id="hq-options">
+                {hqOptions.map((seat) => (
+                  <option key={seat} value={seat} />
                 ))}
-              </select>
+              </datalist>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="addFloor">Select Floor</Label>
-              <select 
+              <input
+                list="floor-options"
                 id="addFloor"
                 value={addFloor}
-                onChange={(e) => setAddFloor(e.target.value)}
+                onChange={(e) => {
+                  setAddFloor(e.target.value);
+                  setCurrentFloor?.(e.target.value);
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">-- Select a floor --</option>
-                {floors.map((floor) => (
-                  <option key={floor} value={floor}>{floor}</option>
+                placeholder="Select or type a floor"
+              />
+              <datalist id="floor-options">
+                {floorOptions.map((floor) => (
+                  <option key={floor} value={floor} />
                 ))}
-              </select>
+              </datalist>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddMapModal(false)}>
               Cancel
             </Button>
-            <Button onClick={handleConfirmAddMap}>
-              Add
+            <Button onClick={handleSaveMap}>
+              Guardar
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -228,41 +399,82 @@ export default function MapLegend({ onModeChange, onBackToMenu }: MapLegendProps
             <DialogTitle>Edit Map</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            {savedMaps.length > 0 && (
+              <div className="grid gap-2">
+                <Label htmlFor="editSavedMap">Select Saved Map</Label>
+                <select
+                  id="editSavedMap"
+                  value={editSeat && editFloor ? `${editSeat}||${editFloor}` : ''}
+                  onChange={async (e) => {
+                    const [hq, fl] = e.target.value.split('||');
+                    setEditSeat(hq);
+                    setEditFloor(fl);
+                    setCurrentHeadquarters?.(hq);
+                    setCurrentFloor?.(fl);
+                    if (onLoadMap) {
+                      await onLoadMap(hq, fl);
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">-- Select a saved map --</option>
+                  {savedMaps.map((m) => (
+                    <option key={`${m.headquarters}||${m.floor}`} value={`${m.headquarters}||${m.floor}`}>
+                      {m.headquarters} - {m.floor}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div className="grid gap-2">
               <Label htmlFor="editSeat">Select Headquarters</Label>
-              <select 
+              <input
+                list="hq-options"
                 id="editSeat"
                 value={editSeat}
-                onChange={(e) => setEditSeat(e.target.value)}
+                onChange={(e) => {
+                  setEditSeat(e.target.value);
+                  setCurrentHeadquarters?.(e.target.value);
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">-- Select a headquarters --</option>
-                {seats.map((seat) => (
-                  <option key={seat} value={seat}>{seat}</option>
+                placeholder="Select or type a headquarters"
+              />
+              <datalist id="hq-options">
+                {hqOptions.map((seat) => (
+                  <option key={seat} value={seat} />
                 ))}
-              </select>
+              </datalist>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="editFloor">Select Floor</Label>
-              <select 
+              <input
+                list="floor-options"
                 id="editFloor"
                 value={editFloor}
-                onChange={(e) => setEditFloor(e.target.value)}
+                onChange={(e) => {
+                  setEditFloor(e.target.value);
+                  setCurrentFloor?.(e.target.value);
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">-- Select a floor --</option>
-                {floors.map((floor) => (
-                  <option key={floor} value={floor}>{floor}</option>
+                placeholder="Select or type a floor"
+              />
+              <datalist id="floor-options">
+                {floorOptions.map((floor) => (
+                  <option key={floor} value={floor} />
                 ))}
-              </select>
+              </datalist>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditMapModal(false)}>
               Cancel
             </Button>
-            <Button onClick={handleConfirmEditMap}>
-              Continue
+            <Button variant="outline" onClick={handleLoadMapForEdit}>
+              Cargar
+            </Button>
+            <Button onClick={handleSaveEditMap}>
+              Guardar
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -275,6 +487,34 @@ export default function MapLegend({ onModeChange, onBackToMenu }: MapLegendProps
             <DialogTitle>View Map</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            {savedMaps.length > 0 && (
+              <div className="grid gap-2">
+                <Label htmlFor="viewSavedMap">Select Saved Map</Label>
+                <select
+                  id="viewSavedMap"
+                  value={selectedSeat && selectedFloor ? `${selectedSeat}||${selectedFloor}` : ''}
+                  onChange={async (e) => {
+                    const [hq, fl] = e.target.value.split('||');
+                    setSelectedSeat(hq);
+                    setSelectedFloor(fl);
+                    setCurrentHeadquarters?.(hq);
+                    setCurrentFloor?.(fl);
+                    if (onLoadMap) {
+                      await onLoadMap(hq, fl);
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">-- Select a saved map --</option>
+                  {savedMaps.map((m) => (
+                    <option key={`${m.headquarters}||${m.floor}`} value={`${m.headquarters}||${m.floor}`}>
+                      {m.headquarters} - {m.floor}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div className="grid gap-2">
               <Label htmlFor="selectFloor">Select Floor</Label>
               <select 
@@ -284,7 +524,7 @@ export default function MapLegend({ onModeChange, onBackToMenu }: MapLegendProps
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">-- Select a floor --</option>
-                {floors.map((floor) => (
+                {floorOptions.map((floor) => (
                   <option key={floor} value={floor}>{floor}</option>
                 ))}
               </select>
@@ -298,7 +538,7 @@ export default function MapLegend({ onModeChange, onBackToMenu }: MapLegendProps
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">-- Select a headquarters --</option>
-                {seats.map((seat) => (
+                {hqOptions.map((seat) => (
                   <option key={seat} value={seat}>{seat}</option>
                 ))}
               </select>

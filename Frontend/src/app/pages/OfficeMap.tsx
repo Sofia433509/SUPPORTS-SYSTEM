@@ -47,7 +47,7 @@
  * - ../components/OfficeMap: Subcomponentes del mapa de oficinas
  */
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { 
   OfficeMapHeader, 
   StatsCards, 
@@ -57,6 +57,7 @@ import {
   TipBox 
 } from '../components/OfficeMap';
 import { toast } from 'sonner'; // Importamos toast para las notificaciones
+import { apiService } from '../utils/api';
 
 // Objetos por defecto disponibles para agregar al mapa
 // Incluye zonas, marcos, áreas de tienda, gestión y entrada
@@ -79,6 +80,9 @@ export default function OfficeMap() {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [resizingId, setResizingId] = useState<string | null>(null);
   const [activeMode, setActiveMode] = useState<'select' | 'add' | 'edit' | 'view'>('select');
+  const [mapHeadquarters, setMapHeadquarters] = useState('');
+  const [mapFloor, setMapFloor] = useState('');
+  const [isExistingMap, setIsExistingMap] = useState(false);
   const [scale, setScale] = useState(1);
   
   const MIN_SCALE = 0.5;
@@ -93,6 +97,7 @@ export default function OfficeMap() {
   const noIssues = desks.filter(d => d.type === 'desk' && !d.hasReport).length;
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (activeMode === 'view') return; // No permitir cargar CSV en modo ver
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -103,8 +108,10 @@ export default function OfficeMap() {
 
       const parsed = rows.map((row, index) => {
         const [id, x, y, width, height, type] = row.split(',');
+        const cleanId = id?.trim() || `D-${100 + index}`;
         return {
-          id: id?.trim() || `D-${100 + index}`,
+          id: cleanId,
+          name: cleanId,
           x: x && x.trim() !== "" ? Number(x) : null,
           y: y && y.trim() !== "" ? Number(y) : null,
           width: Number(width) || 80,
@@ -141,6 +148,7 @@ export default function OfficeMap() {
   };
 
   const handleSvgDrop = (e: React.DragEvent) => {
+    if (activeMode === 'view') return; // No permitir agregar objetos en modo ver
     e.preventDefault();
     const data = JSON.parse(e.dataTransfer.getData("objectData"));
     // svgRef ya no se usa - usamos e.currentTarget
@@ -154,6 +162,7 @@ export default function OfficeMap() {
       const newObj = {
         ...data,
         id: `${data.id}-${Date.now()}`,
+        name: data.name || data.id,
         x: x - data.width / 2,
         y: y - data.height / 2,
         placed: true
@@ -161,7 +170,7 @@ export default function OfficeMap() {
       setDesks(prev => [...prev, newObj]);
       // Notificación de éxito al agregar elemento
       toast.success('Element added', {
-        description: `The element ${data.id} has been added to the map`,
+        description: `The element ${newObj.name} has been added to the map`,
         duration: 3000,
       });
     } else {
@@ -176,6 +185,8 @@ export default function OfficeMap() {
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
+    if (activeMode === 'view') return; // No permitir mover en modo solo lectura
+
     // svgRef ya no se usa - usamos e.currentTarget
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
@@ -223,6 +234,7 @@ export default function OfficeMap() {
 
   // Handler para iniciar drag desde el canvas
   const handleCanvasMouseDown = (id: string) => {
+    if (activeMode === 'view') return; // No permitir mover en modo solo lectura
     setDraggingId(id);
   };
 
@@ -236,6 +248,14 @@ export default function OfficeMap() {
     setActiveMode(mode);
   };
 
+  // Asegurar que no haya dragging/redimensionando si estamos en modo view
+  useEffect(() => {
+    if (activeMode === 'view') {
+      setDraggingId(null);
+      setResizingId(null);
+    }
+  }, [activeMode]);
+
   // Handler para volver al menú inicial
   const handleBackToMenu = () => {
     setActiveMode('select');
@@ -248,6 +268,8 @@ export default function OfficeMap() {
 
   // Handler para eliminar un elemento placed y devolverlo al inventory
   const handleDeleteItem = (id: string) => {
+    if (activeMode === 'view') return; // No permitir borrar en modo ver
+
     setDesks(prev =>
       prev.map(d =>
         d.id === id
@@ -255,6 +277,90 @@ export default function OfficeMap() {
           : d
       )
     );
+  };
+
+  // Guardar mapa (crea registros de headquarters/floor si no existen)
+  const handleSaveMap = async (headquarters: string, floor: string) => {
+    try {
+      await apiService.saveMap({
+        headquarters,
+        floor,
+        objects: desks.map((d) => ({
+          type: d.type,
+          name: d.name || d.id,
+          x: d.x,
+          y: d.y,
+          width: d.width,
+          height: d.height,
+          placed: d.placed,
+          isDefault: d.isDefault || false,
+        })),
+      });
+
+      // Asegurar que el canvas muestre el nombre del desk (no el id)
+      setDesks((prev) =>
+        prev.map((d) => ({
+          ...d,
+          name: d.name || d.id,
+        }))
+      );
+
+      toast.success('Mapa guardado correctamente');
+      setActiveMode('edit');
+      setIsExistingMap(true);
+    } catch (error) {
+      console.error('Error guardando mapa:', error);
+      toast.error('No se pudo guardar el mapa. Revisa la consola.');
+      throw error;
+    }
+  };
+
+  // Cargar mapa existente desde la DB para editarlo
+  const handleLoadMap = async (headquarters: string, floor: string) => {
+    try {
+      const resp = await apiService.viewMap(headquarters, floor);
+      setDesks(
+        resp.objects.map((d) => ({
+          ...d,
+          id: d.id?.toString() ?? `${d.type}-${Date.now()}`,
+          name: d.name || d.id?.toString() || `${d.type}-${Date.now()}`,
+        }))
+      );
+      setActiveMode('edit');
+      setIsExistingMap(true);
+      toast.success('Mapa cargado para editar');
+    } catch (error) {
+      console.error('Error cargando mapa:', error);
+      toast.error('No se pudo cargar el mapa. Revisa la consola.');
+      throw error;
+    }
+  };
+
+  // Editar mapa (reemplaza los objetos para ese floor)
+  const handleEditMap = async (headquarters: string, floor: string) => {
+    try {
+      await apiService.editMap({
+        headquarters,
+        floor,
+        objects: desks.map((d) => ({
+          type: d.type,
+          name: d.name || d.id,
+          x: d.x,
+          y: d.y,
+          width: d.width,
+          height: d.height,
+          placed: d.placed,
+          isDefault: d.isDefault || false,
+        })),
+      });
+      toast.success('Mapa actualizado correctamente');
+      setActiveMode('edit');
+      setIsExistingMap(true);
+    } catch (error) {
+      console.error('Error editando mapa:', error);
+      toast.error('No se pudo actualizar el mapa. Revisa la consola.');
+      throw error;
+    }
   };
 
   // Si el modo es 'view', mostrar solo el canvas sin sidebars
@@ -267,7 +373,19 @@ export default function OfficeMap() {
         <OfficeMapHeader />
 
         {/* Leyenda */}
-        <MapLegend onModeChange={handleModeChange} onBackToMenu={handleBackToMenu} />
+        <MapLegend
+          activeMode={activeMode}
+          onModeChange={handleModeChange}
+          onBackToMenu={handleBackToMenu}
+          onSaveMap={handleSaveMap}
+          onEditMap={handleEditMap}
+          onLoadMap={handleLoadMap}
+          currentHeadquarters={mapHeadquarters}
+          currentFloor={mapFloor}
+          setCurrentHeadquarters={setMapHeadquarters}
+          setCurrentFloor={setMapFloor}
+          isExistingMap={isExistingMap}
+        />
 
         {/* Canvas a pantalla completa */}
         <div className="flex-1 flex gap-6 relative">
@@ -283,6 +401,7 @@ export default function OfficeMap() {
             onResizeStart={handleResizeStart}
             onDeleteItem={handleDeleteItem}
             scale={scale}
+            readOnly={true}
           />
 
           {/* Botones de zoom en la esquina inferior derecha */}
@@ -328,7 +447,19 @@ export default function OfficeMap() {
         />
 
         {/* Leyenda del Mapa */}
-        <MapLegend onModeChange={handleModeChange} onBackToMenu={handleBackToMenu} />
+        <MapLegend
+          activeMode={activeMode}
+          onModeChange={handleModeChange}
+          onBackToMenu={handleBackToMenu}
+          onSaveMap={handleSaveMap}
+          onEditMap={handleEditMap}
+          onLoadMap={handleLoadMap}
+          currentHeadquarters={mapHeadquarters}
+          currentFloor={mapFloor}
+          setCurrentHeadquarters={setMapHeadquarters}
+          setCurrentFloor={setMapFloor}
+          isExistingMap={isExistingMap}
+        />
 
         {/* Layout */}
         <div className="flex gap-6 h-[700px] relative">
@@ -394,7 +525,19 @@ export default function OfficeMap() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col p-6 space-y-6">
       <OfficeMapHeader />
-      <MapLegend onModeChange={handleModeChange} onBackToMenu={handleBackToMenu} />
+      <MapLegend
+        activeMode={activeMode}
+        onModeChange={handleModeChange}
+        onBackToMenu={handleBackToMenu}
+        onSaveMap={handleSaveMap}
+        onEditMap={handleEditMap}
+        onLoadMap={handleLoadMap}
+        currentHeadquarters={mapHeadquarters}
+        currentFloor={mapFloor}
+        setCurrentHeadquarters={setMapHeadquarters}
+        setCurrentFloor={setMapFloor}
+        isExistingMap={isExistingMap}
+      />
       
       {/* Canvas vacío para visualizar el espacio de mapeo */}
       <div className="flex-1 bg-white rounded-lg border-2 border-dashed border-gray-300 shadow-sm flex items-center justify-center">

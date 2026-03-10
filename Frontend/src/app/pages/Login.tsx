@@ -58,7 +58,16 @@ export default function Login() {
     try {
       await login(email, password);
       toast.success('Login successful!', { duration: 5000 });
-      navigate('/admin'); // Navigate to admin dashboard after successful login
+      // Obtener el usuario del localStorage
+      const user = JSON.parse(localStorage.getItem('user_data') || '{}');
+      console.log('Usuario logueado:', user);
+        if (user.role === 'admin') {
+          window.location.href = '/admin';
+        } else if (user.role === 'employee') {
+          window.location.href = '/employee';
+        } else {
+          window.location.href = '/';
+        }
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Login failed';
       setError(msg);

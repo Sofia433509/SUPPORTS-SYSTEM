@@ -50,6 +50,8 @@ import { Badge } from '../ui/badge';
 interface DeskItem {
   /** Identificador único del elemento */
   id: string;
+  /** Nombre del elemento (mostrar en el canvas) */
+  name?: string;
   /** Posición X del elemento en el canvas */
   x: number;
   /** Posición Y del elemento en el canvas */
@@ -95,6 +97,8 @@ interface MapCanvasProps {
   onDeleteItem?: (id: string) => void;
   /** Escala de zoom del canvas */
   scale?: number;
+  /** Modo solo lectura (no mover ni redimensionar objetos) */
+  readOnly?: boolean;
 }
 
 /**
@@ -146,6 +150,7 @@ export default function MapCanvas({
   onResizeStart,
   onDeleteItem,
   scale = 1,
+  readOnly = false,
 }: MapCanvasProps) {
   // Referencia al elemento SVG para obtener dimensiones y posiciones
   const svgRef = useRef<SVGSVGElement>(null);
@@ -169,7 +174,7 @@ export default function MapCanvas({
       {/* Área del canvas: manejo de drop y mouse */}
       <div
         className="w-full h-full overflow-auto"
-        onDrop={onDrop}
+        onDrop={readOnly ? undefined : onDrop}
         onDragOver={(e) => e.preventDefault()} // Necesario para permitir drop
         onMouseMove={onMouseMove}
       >
@@ -207,8 +212,8 @@ export default function MapCanvas({
                 fill={getFillColor(layer)}
                 rx={6} // Bordes más redondeados para zonas
                 strokeWidth={2}
-                onMouseDown={() => onMouseDown(layer.id)} // Iniciar arrastre
-                className="cursor-move" // Cursor de movimiento
+                onMouseDown={() => !readOnly && onMouseDown(layer.id)} // Iniciar arrastre
+                className={readOnly ? undefined : 'cursor-move'} // Cursor de movimiento
               />
               {/* Texto con el ID del elemento centrado tambien sentencias de que los tres objetos tienen nombre y 2 sin */}
               {layer.type !== "zone" && layer.type !== "frame" && (
@@ -225,44 +230,48 @@ export default function MapCanvas({
             )}
               
               {/* Botón de eliminar (X) en la esquina superior derecha */}
-              <circle
-                cx={layer.width - 6}
-                cy={6}
-                r={5}
-                fill="#EF4444"
-                className="cursor-pointer hover:fill-red-700 transition"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteItem?.(layer.id);
-                }}
-              />
-              <text
-                x={layer.width - 6}
-                y={6}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fill="white"
-                className="text-xs font-bold pointer-events-none select-none"
-              >
-                ×
-              </text>
+              {!readOnly && (
+                <>
+                  <circle
+                    cx={layer.width - 6}
+                    cy={6}
+                    r={5}
+                    fill="#EF4444"
+                    className="cursor-pointer hover:fill-red-700 transition"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteItem?.(layer.id);
+                    }}
+                  />
+                  <text
+                    x={layer.width - 6}
+                    y={6}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fill="white"
+                    className="text-xs font-bold pointer-events-none select-none"
+                  >
+                    ×
+                  </text>
 
-              {/* Handle de redimensionamiento (esquina inferior derecha) */}
-              <rect
-                x={layer.width - 7.5}
-                y={layer.height - 7.5}
-                width={10}
-                height={10}
-                rx={7}
-                fill="white"
-                stroke="#374151"
-                strokeWidth={1}
-                className="cursor-se-resize"
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  onResizeStart?.(layer.id);
-                }}
-              />
+                  {/* Handle de redimensionamiento (esquina inferior derecha) */}
+                  <rect
+                    x={layer.width - 7.5}
+                    y={layer.height - 7.5}
+                    width={10}
+                    height={10}
+                    rx={7}
+                    fill="white"
+                    stroke="#374151"
+                    strokeWidth={1}
+                    className="cursor-se-resize"
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      onResizeStart?.(layer.id);
+                    }}
+                  />
+                </>
+              )}
             </g>
           ))}
 
@@ -276,10 +285,10 @@ export default function MapCanvas({
                 height={item.height}
                 fill={getFillColor(item)}
                 rx={8} // Bordes redondeados
-                onMouseDown={() => onMouseDown(item.id)} // Iniciar arrastre
-                className="cursor-move" // Cursor de movimiento
+                onMouseDown={() => !readOnly && onMouseDown(item.id)} // Iniciar arrastre
+                className={readOnly ? undefined : 'cursor-move'} // Cursor de movimiento solo si no es modo lectura
               />
-              {/* Texto con el ID del elemento centrado */}
+              {/* Texto con el NAME del elemento centrado, o id si no existe */}
               <text
                 x={item.width / 2}
                 y={item.height / 2}
@@ -288,48 +297,52 @@ export default function MapCanvas({
                 fill="white"
                 className="text-[10px] font-bold pointer-events-none"
               >
-                {item.id}
+                {item.name || item.id}
               </text>
 
               {/* Botón de eliminar (X) en la esquina superior derecha */}
-              <circle
-                cx={item.width - 6}
-                cy={6}
-                r={5}
-                fill="#EF4444"
-                className="cursor-pointer hover:fill-red-700 transition"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteItem?.(item.id);
-                }}
-              />
-              <text
-                x={item.width - 6}
-                y={6}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fill="white"
-                className="text-xs font-bold pointer-events-none select-none"
-              >
-                ×
-              </text>
+              {!readOnly && (
+                <>
+                  <circle
+                    cx={item.width - 6}
+                    cy={6}
+                    r={5}
+                    fill="#EF4444"
+                    className="cursor-pointer hover:fill-red-700 transition"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteItem?.(item.id);
+                    }}
+                  />
+                  <text
+                    x={item.width - 6}
+                    y={6}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fill="white"
+                    className="text-xs font-bold pointer-events-none select-none"
+                  >
+                    ×
+                  </text>
 
-              {/* Handle de redimensionamiento (esquina inferior derecha) */}
-              <rect
-                x={item.width - 8}
-                y={item.height - 8}
-                width={12}
-                height={12}
-                rx={2}
-                fill="#3B82F6"
-                stroke="white"
-                strokeWidth={1}
-                className="cursor-se-resize hover:fill-blue-600 transition"
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  onResizeStart?.(item.id);
-                }}
-              />
+                  {/* Handle de redimensionamiento (esquina inferior derecha) */}
+                  <rect
+                    x={item.width - 8}
+                    y={item.height - 8}
+                    width={12}
+                    height={12}
+                    rx={2}
+                    fill="#3B82F6"
+                    stroke="white"
+                    strokeWidth={1}
+                    className="cursor-se-resize hover:fill-blue-600 transition"
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      onResizeStart?.(item.id);
+                    }}
+                  />
+                </>
+              )}
             </g>
           ))}
         </svg>

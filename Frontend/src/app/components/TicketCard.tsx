@@ -22,6 +22,14 @@ const priorityColors = {
 };
 
 export default function TicketCard({ ticket, onClick }: TicketCardProps) {
+    // Asegurar que createdAt sea un objeto Date
+    let fecha = ticket.createdAt;
+    if (typeof fecha === 'string') {
+      fecha = new Date(fecha);
+    }
+    const fechaStr = fecha instanceof Date && !isNaN(fecha.getTime())
+      ? fecha.toLocaleDateString('es-ES')
+      : 'Fecha desconocida';
   const [{ isDragging }] = useDrag(() => ({
     type: 'TICKET',
     item: { id: ticket.id },
@@ -71,7 +79,7 @@ export default function TicketCard({ ticket, onClick }: TicketCardProps) {
             )}
             <div className="flex items-center gap-1">
               <Clock className="w-3 h-3" />
-              <span>{ticket.createdAt.toLocaleDateString('es-ES')}</span>
+              <span>{fechaStr}</span>
             </div>
           </div>
         </div>

@@ -29,7 +29,7 @@ export default function EmployeeDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">My Tickets</h1>
-              <p className="text-sm text-gray-600">Welcome, {user?.name}</p>
+              <p className="text-sm text-gray-600">Welcome, {user?.name || user?.email}</p>
             </div>
             <div className="flex items-center gap-3">
               <Button onClick={() => setShowForm(true)}>
@@ -142,8 +142,8 @@ export default function EmployeeDashboard() {
       {showForm && (
         <TicketForm
           onClose={handleCloseForm}
-          userId={user?.id ? String(user.id) : ''}
-          userName={user?.name || ''}
+          userId={String(user?.id ?? '')}
+          userName={user?.name || user?.email || ''}
         />
       )}
 

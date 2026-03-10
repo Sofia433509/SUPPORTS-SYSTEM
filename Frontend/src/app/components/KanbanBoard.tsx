@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useDrop } from 'react-dnd';
@@ -51,7 +51,7 @@ function DropZone({ status, tickets, onDrop, onTicketClick, allowDrop }: DropZon
 
   return (
     <div
-      ref={drop}
+      ref={drop as any}
       className={`flex-1 min-h-[600px] transition-colors ${
         isOver ? 'bg-blue-50' : ''
       }`}
@@ -88,22 +88,26 @@ export default function KanbanBoard() {
   const { tickets, updateTicket } = useTickets();
   const { user } = useAuth();
   const role = user?.role ?? '';
-  const isIT = role.toLowerCase() === 'it';
+  const isAdmin = role === 'admin';
 
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<TicketCategory | 'all'>('all');
 
   const handleDrop = (ticketId: string, newStatus: TicketStatus) => {
-    if (isIT) {
+    if (isAdmin) {
       updateTicket(ticketId, { status: newStatus });
     }
   };
 
+  // Filtrar tickets por usuario (empleado) o mostrar todos (admin)
+  const userId = user?.id;
+  const visibleTickets = isAdmin ? tickets : tickets.filter((t) => String(t.createdBy) === String(userId));
+
   // Filtrar tickets por categoría
   const filteredTickets =
     categoryFilter === 'all'
-      ? tickets
-      : tickets.filter((t) => t.category === categoryFilter);
+      ? visibleTickets
+      : visibleTickets.filter((t) => t.category === categoryFilter);
 
   // Agrupar por estado
   const ticketsByStatus = {
@@ -116,7 +120,7 @@ export default function KanbanBoard() {
     <DndProvider backend={HTML5Backend}>
       <div className="space-y-6">
         {/* Filters */}
-        {isIT && (
+        {isAdmin && (
           <Card>
             <CardContent className="py-4">
               <div className="flex items-center gap-4">
@@ -153,21 +157,21 @@ export default function KanbanBoard() {
             tickets={ticketsByStatus.pending}
             onDrop={handleDrop}
             onTicketClick={setSelectedTicket}
-            allowDrop={isIT}
+            allowDrop={isAdmin}
           />
           <DropZone
             status="in-progress"
             tickets={ticketsByStatus['in-progress']}
             onDrop={handleDrop}
             onTicketClick={setSelectedTicket}
-            allowDrop={isIT}
+            allowDrop={isAdmin}
           />
           <DropZone
             status="resolved"
             tickets={ticketsByStatus.resolved}
             onDrop={handleDrop}
             onTicketClick={setSelectedTicket}
-            allowDrop={isIT}
+            allowDrop={isAdmin}
           />
         </div>
 
@@ -186,7 +190,7 @@ export default function KanbanBoard() {
         <TicketDetailsModal
           ticket={selectedTicket}
           onClose={() => setSelectedTicket(null)}
-          isAdmin={isIT}
+          isAdmin={isAdmin}
         />
       )}
     </DndProvider>

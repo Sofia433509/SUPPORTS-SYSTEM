@@ -1,11 +1,11 @@
 import { createContext, useContext, useState, type ReactNode, useEffect } from 'react';
-import type { User } from '../types/auth';
-import { apiService } from '../utils/api';
+import type { User, UserRole } from '../types/auth';
+import { apiService, type RegisterResponse } from '../utils/api';
 
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (fullName: string, email: string, password: string, campaign: string) => Promise<void>;
+  register: (fullName: string, email: string, password: string, campaign: string) => Promise<RegisterResponse>;
   logout: () => void;
   isAdmin: boolean;
   isLoading: boolean;
@@ -42,17 +42,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await apiService.login({ institutional_email: email, password });
 
+      // Backend devuelve { token, user }
+      const userInfo = response.user;
+      const roleRaw = userInfo.role;
+      let normalizedRole: UserRole = 'employee';
+      if (roleRaw === 'IT') normalizedRole = 'admin';
+      else if (roleRaw === 'Employees') normalizedRole = 'employee';
+
       const userData: User = {
-        id: response.id_user,
-        name: response.full_name,
-        email: response.institutional_email,
-        role: response.role_name, // use exact role name
-        campaign: response.campaign,
-        access_token: response.access_token,
+        id: String(userInfo.id),
+        name: userInfo.full_name,
+        email: userInfo.institutional_email,
+        role: normalizedRole,
+        campaign: userInfo.campaign,
+        access_token: response.token,
       };
 
       setUser(userData);
-      localStorage.setItem('access_token', response.access_token);
+      localStorage.setItem('access_token', userData.access_token || '');
       localStorage.setItem('user_data', JSON.stringify(userData));
     } catch (error) {
       throw error;
@@ -97,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const isAdmin = user?.role?.toLowerCase() === 'it';
+  const isAdmin = user?.role === 'admin';
 
   return (
     <AuthContext.Provider value={{

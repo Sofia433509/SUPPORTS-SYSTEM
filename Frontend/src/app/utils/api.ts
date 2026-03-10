@@ -1,5 +1,5 @@
 // API configuration and utilities
-const API_BASE_URL = 'https://margery-highfalutin-unambiguously.ngrok-free.dev';
+const API_BASE_URL = 'http://localhost:3006/api';
 
 export interface LoginRequest {
   institutional_email: string;
@@ -7,13 +7,19 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-  id_user: number; 
-  full_name: string;
-  institutional_email: string;
-  role_name: string;
-  campaign?: string;
-  access_token: string;
-  token_type: string;
+  token: string;
+  user: {
+    id: number;
+    role: string;
+    full_name: string;
+    institutional_email: string;
+    campaign?: string;
+  };
+}
+
+export interface RegisterResponse {
+  message: string;
+  userId: string;
 }
 
 export interface PasswordRecoveryRequest {
@@ -40,6 +46,36 @@ export interface ResetPasswordRequest {
 
 export interface ResetPasswordResponse {
   message: string;
+}
+
+export interface MapObject {
+  id?: string | number;
+  name?: string;
+  type: string;
+  x: number | null;
+  y: number | null;
+  width: number;
+  height: number;
+  placed: boolean;
+  isDefault: boolean;
+}
+
+export interface MapRequest {
+  headquarters: string;
+  floor: string;
+  objects: MapObject[];
+}
+
+export interface MapResponse {
+  headquarters: string;
+  floor: string;
+  objects: MapObject[];
+}
+
+export interface MapOptionsResponse {
+  headquarters: string[];
+  floors: string[];
+  savedMaps?: { headquarters: string; floor: string }[];
 }
 
 class ApiService {
@@ -79,9 +115,8 @@ class ApiService {
     });
   }
 
-  async register(data: RegisterRequest): Promise<LoginResponse> {
-    // backend returns a LoginResponse upon successful registration
-    return this.request<LoginResponse>('/users/register', {
+  async register(data: RegisterRequest): Promise<RegisterResponse> {
+    return this.request<RegisterResponse>('/users/register', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -106,6 +141,28 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(request),
     });
+  }
+
+  async saveMap(data: MapRequest): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/maps/save', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async editMap(data: MapRequest): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/maps/edit', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async viewMap(headquarters: string, floor: string): Promise<MapResponse> {
+    return this.request<MapResponse>(`/maps/view?headquarters=${encodeURIComponent(headquarters)}&floor=${encodeURIComponent(floor)}`);
+  }
+
+  async getMapOptions(): Promise<MapOptionsResponse> {
+    return this.request<MapOptionsResponse>('/maps/options');
   }
 }
 
