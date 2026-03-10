@@ -19,6 +19,7 @@ interface MapLegendProps {
   setCurrentHeadquarters?: (value: string) => void;
   setCurrentFloor?: (value: string) => void;
   isExistingMap?: boolean;
+  initialViewOpen?: boolean;
 }
 
 export default function MapLegend({
@@ -33,6 +34,7 @@ export default function MapLegend({
   setCurrentHeadquarters,
   setCurrentFloor,
   isExistingMap,
+  initialViewOpen,
 }: MapLegendProps) {
   const isViewMode = activeMode === 'view';
   const [isOpen, setIsOpen] = useState(false);
@@ -73,11 +75,17 @@ export default function MapLegend({
 
   // Funciones del menú
   const handleAddMap = () => {
+    // Mostrar modal de creación (sin cambiar de modo hasta guardar)
+    setAddSeat('');
+    setAddFloor('');
     setAddMapModal(true);
     setIsOpen(false);
   };
 
   const handleEditMap = () => {
+    // Mostrar modal de edición (sin cambiar de modo hasta cargar)
+    setEditSeat('');
+    setEditFloor('');
     setEditMapModal(true);
     setIsOpen(false);
   };
@@ -103,17 +111,53 @@ export default function MapLegend({
     }
   };
 
-  const handleGlobalSave = async () => {
-    if (!currentHeadquarters || !currentFloor) {
+  // Si se indica que abra el modal de ver mapa al iniciar, hacerlo automáticamente
+  useEffect(() => {
+    if (initialViewOpen) {
+      setViewMapModal(true);
+      if (onModeChange) onModeChange('view');
+    }
+  }, [initialViewOpen, onModeChange]);
+
+  const handleAddMapSave = async () => {
+    const headquarters = addSeat.trim();
+    const floor = addFloor.trim();
+
+    if (!headquarters || !floor) {
       toast.error('Selecciona sede y piso antes de guardar');
       return;
     }
 
     try {
+      if (onSaveMap) {
+        await onSaveMap(headquarters, floor);
+      }
+      setAddMapModal(false);
+      setIsOpen(false);
+    } catch (error) {
+      // onSaveMap ya maneja mensajes de error, solo cerramos el modal si es exitoso
+    }
+  };
+
+  const handleGlobalSave = async () => {
+    // Preferir valores ya guardados en el estado del padre; si no, usar los que el usuario ingresó en el modal
+    const headquarters = currentHeadquarters || addSeat || editSeat || selectedSeat;
+    const floor = currentFloor || addFloor || editFloor || selectedFloor;
+
+    if (!headquarters || !floor) {
+      toast.error('Selecciona sede y piso antes de guardar');
+      return;
+    }
+
+    // Asegurar que el estado padre también esté alineado para futuras operaciones
+    setCurrentHeadquarters?.(headquarters);
+    setCurrentFloor?.(floor);
+
+    try {
       if (isExistingMap && onEditMap) {
-        await onEditMap(currentHeadquarters, currentFloor);
+        await onEditMap(headquarters, floor);
       } else if (onSaveMap) {
-        await onSaveMap(currentHeadquarters, currentFloor);
+        await onSaveMap(headquarters, floor);
       }
       toast.success('Mapa guardado');
     } catch (err) {
@@ -148,40 +192,9 @@ export default function MapLegend({
   }, [addMapModal, editMapModal, viewMapModal]);
 
   // Setear metadata actual (usar en el botón Guardar global)
-  const setMetadataFromAdd = () => {
-    setCurrentHeadquarters?.(addSeat);
-    setCurrentFloor?.(addFloor);
-  };
-
   const setMetadataFromEdit = () => {
     setCurrentHeadquarters?.(editSeat);
     setCurrentFloor?.(editFloor);
-  };
-
-  const handleSaveMap = async () => {
-    if (!addSeat || !addFloor) {
-      toast.error('Selecciona sede y piso');
-      return;
-    }
-
-    if (!onSaveMap) {
-      toast.error('Función de guardar no disponible');
-      return;
-    }
-
-    setMetadataFromAdd();
-
-    try {
-      await onSaveMap(addSeat, addFloor);
-      toast.success('Mapa guardado correctamente');
-      setAddMapModal(false);
-      setAddSeat('');
-      setAddFloor('');
-      if (onModeChange) onModeChange('add');
-    } catch (err) {
-      console.error('Error guardando mapa (frontend):', err);
-      toast.error('Error guardando mapa');
-    }
   };
 
   const handleLoadMapForEdit = async () => {
@@ -209,28 +222,7 @@ export default function MapLegend({
     }
   };
 
-  const handleSaveEditMap = async () => {
-    if (!editSeat || !editFloor) {
-      toast.error('Selecciona sede y piso');
-      return;
-    }
 
-    if (!onEditMap) {
-      toast.error('Función de guardar no disponible');
-      return;
-    }
-
-    try {
-      await onEditMap(editSeat, editFloor);
-      setEditMapModal(false);
-      setEditSeat('');
-      setEditFloor('');
-      if (onModeChange) onModeChange('edit');
-    } catch (err) {
-      console.error('Error guardando mapa (frontend):', err);
-      toast.error('Error guardando mapa');
-    }
-  };
 
   return (
     <>
@@ -385,7 +377,7 @@ export default function MapLegend({
             <Button variant="outline" onClick={() => setAddMapModal(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveMap}>
+            <Button onClick={handleAddMapSave}>
               Guardar
             </Button>
           </DialogFooter>
@@ -405,15 +397,12 @@ export default function MapLegend({
                 <select
                   id="editSavedMap"
                   value={editSeat && editFloor ? `${editSeat}||${editFloor}` : ''}
-                  onChange={async (e) => {
+                  onChange={(e) => {
                     const [hq, fl] = e.target.value.split('||');
                     setEditSeat(hq);
                     setEditFloor(fl);
                     setCurrentHeadquarters?.(hq);
                     setCurrentFloor?.(fl);
-                    if (onLoadMap) {
-                      await onLoadMap(hq, fl);
-                    }
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 >
@@ -473,9 +462,6 @@ export default function MapLegend({
             <Button variant="outline" onClick={handleLoadMapForEdit}>
               Cargar
             </Button>
-            <Button onClick={handleSaveEditMap}>
-              Guardar
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -493,15 +479,12 @@ export default function MapLegend({
                 <select
                   id="viewSavedMap"
                   value={selectedSeat && selectedFloor ? `${selectedSeat}||${selectedFloor}` : ''}
-                  onChange={async (e) => {
+                  onChange={(e) => {
                     const [hq, fl] = e.target.value.split('||');
                     setSelectedSeat(hq);
                     setSelectedFloor(fl);
                     setCurrentHeadquarters?.(hq);
                     setCurrentFloor?.(fl);
-                    if (onLoadMap) {
-                      await onLoadMap(hq, fl);
-                    }
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 >

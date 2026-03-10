@@ -95,6 +95,10 @@ interface MapCanvasProps {
   onResizeStart?: (id: string) => void;
   /** Callback ejecutado cuando se elimina un elemento */
   onDeleteItem?: (id: string) => void;
+  /** Callback ejecutado cuando se hace click sobre un elemento (en modo view) */
+  onItemClick?: (id: string) => void;
+  /** Map of location -> current ticket count */
+  ticketCounts?: Record<string, number>;
   /** Escala de zoom del canvas */
   scale?: number;
   /** Modo solo lectura (no mover ni redimensionar objetos) */
@@ -105,15 +109,22 @@ interface MapCanvasProps {
  * Función para obtener el color de relleno según el tipo de elemento
  * Cada tipo de elemento tiene un color distintivo para mejor visualización
  */
-const getFillColor = (item: DeskItem): string => {
-  // Si es un escritorio con reporte activo, mostrar en rojo
-  if (item.type === 'desk' && item.hasReport) {
+const getFillColor = (item: DeskItem, ticketCount = 0): string => {
+  // Si es un escritorio con >= 3 tickets, mostrar como urgente
+  if (item.type === 'desk' && ticketCount >= 3) {
+    return "#7C2D12"; // Rojo oscuro (urgente)
+  }
+
+  // Si es un escritorio con al menos 1 ticket, mostrar en rojo
+  if (item.type === 'desk' && ticketCount > 0) {
     return "#EF4444"; // Rojo
   }
-  // Si es un escritorio sin problemas, mostrar en verde
+
+  // Si es un escritorio sin tickets, mostrar en verde
   if (item.type === 'desk') {
     return "#22C55E"; // Verde
   }
+
   // Para los diferentes tipos de objetos/zonas
   switch (item.type) {
     case 'zone':
@@ -149,6 +160,8 @@ export default function MapCanvas({
   onMouseDown,
   onResizeStart,
   onDeleteItem,
+  onItemClick,
+  ticketCounts,
   scale = 1,
   readOnly = false,
 }: MapCanvasProps) {
@@ -215,7 +228,7 @@ export default function MapCanvas({
                 onMouseDown={() => !readOnly && onMouseDown(layer.id)} // Iniciar arrastre
                 className={readOnly ? undefined : 'cursor-move'} // Cursor de movimiento
               />
-              {/* Texto con el ID del elemento centrado tambien sentencias de que los tres objetos tienen nombre y 2 sin */}
+              {/* Mostrar el nombre original del objeto, si está disponible; si no, mostrar el ID */}
               {layer.type !== "zone" && layer.type !== "frame" && (
               <text
                 x={layer.width / 2}
@@ -225,7 +238,7 @@ export default function MapCanvas({
                 fill="white"
                 className="text-xs font-bold pointer-events-none"
               >
-                {layer.id.split("-").slice(0, -1).join("-")}
+                {layer.name || layer.id}
               </text>
             )}
               
@@ -283,10 +296,11 @@ export default function MapCanvas({
               <rect
                 width={item.width}
                 height={item.height}
-                fill={getFillColor(item)}
+                fill={getFillColor(item, ticketCounts?.[item.name || item.id] ?? 0)}
                 rx={8} // Bordes redondeados
                 onMouseDown={() => !readOnly && onMouseDown(item.id)} // Iniciar arrastre
-                className={readOnly ? undefined : 'cursor-move'} // Cursor de movimiento solo si no es modo lectura
+                onClick={() => readOnly && onItemClick?.(item.id)}
+                className={readOnly ? 'cursor-pointer' : 'cursor-move'} // Cursor de movimiento solo si no es modo lectura
               />
               {/* Texto con el NAME del elemento centrado, o id si no existe */}
               <text

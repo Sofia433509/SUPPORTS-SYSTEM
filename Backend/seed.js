@@ -93,23 +93,10 @@ async function seed() {
       FOREIGN KEY (desk_id) REFERENCES desks(id)
     )`);
 
-    // Insertar datos de ejemplo para headquarters y pisos
-    await pool.query("INSERT INTO headquarters (name, connect, radio, bps) VALUES (?, ?, ?, ?)", ['Main Headquarters', '192.168.0.1', 'Radio A', '1000']);
-    await pool.query("INSERT INTO headquarters (name, connect, radio, bps) VALUES (?, ?, ?, ?)", ['South Headquarters', '192.168.1.1', 'Radio B', '1000']);
-    await pool.query("INSERT INTO headquarters (name, connect, radio, bps) VALUES (?, ?, ?, ?)", ['North Headquarters', '192.168.2.1', 'Radio C', '1000']);
-
-    // Insertar pisos de ejemplo
-    const mainHq = await pool.query("SELECT id FROM headquarters WHERE name = ?", ['Main Headquarters']);
-    const southHq = await pool.query("SELECT id FROM headquarters WHERE name = ?", ['South Headquarters']);
-    const northHq = await pool.query("SELECT id FROM headquarters WHERE name = ?", ['North Headquarters']);
-
-    if (!mainHq.length || !southHq.length || !northHq.length) {
-      throw new Error('No se encontraron las sedes esperadas después de insertarlas.');
-    }
-
-    await pool.query("INSERT INTO floors (headquarters_id, name, description) VALUES (?, ?, ?)", [mainHq[0].id, 'Floor 1', 'Main floor']);
-    await pool.query("INSERT INTO floors (headquarters_id, name, description) VALUES (?, ?, ?)", [southHq[0].id, 'Floor 2', 'Second floor']);
-    await pool.query("INSERT INTO floors (headquarters_id, name, description) VALUES (?, ?, ?)", [northHq[0].id, 'Floor 3', 'Third floor']);
+    // Insertar datos de ejemplo para headquarters
+    await pool.query("INSERT INTO headquarters (name, connect, radio, bps) VALUES (?, ?, ?, ?)", ['Caracol radio', '192.168.0.1', 'Radio A', '1000']);
+    await pool.query("INSERT INTO headquarters (name, connect, radio, bps) VALUES (?, ?, ?, ?)", ['Conecta 80', '192.168.1.1', 'Radio B', '1000']);
+    await pool.query("INSERT INTO headquarters (name, connect, radio, bps) VALUES (?, ?, ?, ?)", ['American BPS', '192.168.2.1', 'Radio C', '1000']);
 
     // Insertar usuarios de prueba
     const passwordIT = await bcrypt.hash('ITpassword123', 10);

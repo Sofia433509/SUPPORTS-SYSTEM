@@ -51,7 +51,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const userData: User = {
         id: String(userInfo.id),
-        name: userInfo.full_name,
+        // Backend stores the name in the "name" field.
+        name: userInfo.name,
         email: userInfo.institutional_email,
         role: normalizedRole,
         campaign: userInfo.campaign,

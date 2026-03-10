@@ -28,4 +28,25 @@ const createTicket = async (req, res) => {
   }
 };
 
-module.exports = { getTickets, getTicket, createTicket };
+const updateTicket = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    await ticketModel.updateTicket(id, updates);
+    res.json({ message: 'Ticket actualizado' });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al actualizar ticket' });
+  }
+};
+
+const deleteTicket = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await ticketModel.deleteTicket(id);
+    res.json({ message: 'Ticket eliminado' });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al eliminar ticket' });
+  }
+};
+
+module.exports = { getTickets, getTicket, createTicket, updateTicket, deleteTicket };

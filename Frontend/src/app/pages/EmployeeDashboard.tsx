@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTickets } from '../context/TicketContext';
 import { Button } from '../components/ui/button';
@@ -9,6 +10,7 @@ import TicketDetailsModal from '../components/TicketDetailsModal';
 import { Ticket } from '../types/ticket';
 
 export default function EmployeeDashboard() {
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { tickets } = useTickets();
   const [showForm, setShowForm] = useState(false);
@@ -35,6 +37,10 @@ export default function EmployeeDashboard() {
               <Button onClick={() => setShowForm(true)}>
                 <Plus className="w-4 h-4 mr-2" />
                 New Ticket
+              </Button>
+              <Button variant="secondary" onClick={() => navigate('/OfficeMap?view=1')}>
+                <span className="w-4 h-4 mr-2 inline-flex items-center justify-center">🗺️</span>
+                View Map
               </Button>
               <Button variant="outline" onClick={logout}>
                 <LogOut className="w-4 h-4 mr-2" />

@@ -167,7 +167,7 @@ export default function MapSidebar({
             {/* Sección izquierda: icono de arrastre e ID */}
             <div className="flex items-center gap-2">
               <GripVertical className="w-4 h-4 text-gray-300" />
-              <span className="text-sm font-semibold">{item.id}</span>
+                <span className="text-sm font-semibold">{item.name || item.id}</span>
             </div>
             {/* Botón de rotación del elemento */}
             <RotateCw

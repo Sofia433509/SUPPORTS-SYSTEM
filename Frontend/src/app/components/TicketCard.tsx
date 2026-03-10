@@ -30,7 +30,7 @@ export default function TicketCard({ ticket, onClick }: TicketCardProps) {
     const fechaStr = fecha instanceof Date && !isNaN(fecha.getTime())
       ? fecha.toLocaleDateString('es-ES')
       : 'Fecha desconocida';
-  const [{ isDragging }] = useDrag(() => ({
+  const [{ isDragging }, drag] = useDrag(() => ({
     type: 'TICKET',
     item: { id: ticket.id },
     collect: (monitor) => ({
@@ -40,6 +40,7 @@ export default function TicketCard({ ticket, onClick }: TicketCardProps) {
 
   return (
     <Card
+      ref={drag as any}
       className={`cursor-pointer hover:shadow-md transition-all ${
         isDragging ? 'opacity-50' : 'opacity-100'
       }`}

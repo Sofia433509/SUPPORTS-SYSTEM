@@ -47,7 +47,8 @@
  * - ../components/OfficeMap: Subcomponentes del mapa de oficinas
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   OfficeMapHeader, 
   StatsCards, 
@@ -58,6 +59,9 @@ import {
 } from '../components/OfficeMap';
 import { toast } from 'sonner'; // Importamos toast para las notificaciones
 import { apiService } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
+import { useTickets } from '../context/TicketContext';
+import TicketForm from '../components/TicketForm';
 
 // Objetos por defecto disponibles para agregar al mapa
 // Incluye zonas, marcos, áreas de tienda, gestión y entrada
@@ -71,6 +75,7 @@ const defaultObjects = [
 
 export default function OfficeMap() {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
 
   const [search, setSearch] = useState('');
   // Inicializar desks con los objetos por defecto en el inventario
@@ -84,9 +89,24 @@ export default function OfficeMap() {
   const [mapFloor, setMapFloor] = useState('');
   const [isExistingMap, setIsExistingMap] = useState(false);
   const [scale, setScale] = useState(1);
+  const { tickets } = useTickets();
+  const [showTicketModal, setShowTicketModal] = useState(false);
+  const [ticketLocation, setTicketLocation] = useState('');
+  const [ticketDefaultPriority, setTicketDefaultPriority] = useState<'low' | 'medium' | 'high'>('low');
+  const location = useLocation();
+  const [initialViewOpen, setInitialViewOpen] = useState(false);
   
   const MIN_SCALE = 0.5;
   const MAX_SCALE = 2;
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const viewParam = params.get('view') || params.get('viewMap');
+    if (viewParam === '1' || viewParam?.toLowerCase() === 'true') {
+      setActiveMode('view');
+      setInitialViewOpen(true);
+    }
+  }, [location.search]);
 
   const CANVAS_WIDTH = 2400;
   const CANVAS_HEIGHT = 5000;
@@ -233,8 +253,32 @@ export default function OfficeMap() {
   };
 
   // Handler para iniciar drag desde el canvas
+  const ticketCountsByLocation = useMemo(() => {
+    const map: Record<string, number> = {};
+    tickets.forEach((t) => {
+      if (!t.location) return;
+      map[t.location] = (map[t.location] || 0) + 1;
+    });
+    return map;
+  }, [tickets]);
+
   const handleCanvasMouseDown = (id: string) => {
-    if (activeMode === 'view') return; // No permitir mover en modo solo lectura
+    if (activeMode === 'view') {
+      const clickedDesk = desks.find((d) => d.id === id);
+      const locationName = clickedDesk?.name || id;
+      const currentCount = ticketCountsByLocation[locationName] || 0;
+
+      if (currentCount >= 3) {
+        toast.error('Este puesto ya tiene 3 reportes. No se pueden crear más tickets.');
+        return;
+      }
+
+      setTicketLocation(locationName);
+      setTicketDefaultPriority(currentCount >= 2 ? 'high' : 'low');
+      setShowTicketModal(true);
+      return;
+    }
+
     setDraggingId(id);
   };
 
@@ -244,9 +288,18 @@ export default function OfficeMap() {
   };
 
   // Handler para cambiar el modo activo
-  const handleModeChange = (mode: 'add' | 'edit' | 'view') => {
+  const handleModeChange = useCallback((mode: 'add' | 'edit' | 'view') => {
+    // Al ir a 'add', limpiar todo para que el mapa arranque vacío
+    if (mode === 'add') {
+      setDesks(defaultObjects);
+      setMapHeadquarters('');
+      setMapFloor('');
+      setIsExistingMap(false);
+      setScale(1);
+    }
+
     setActiveMode(mode);
-  };
+  }, []);
 
   // Asegurar que no haya dragging/redimensionando si estamos en modo view
   useEffect(() => {
@@ -257,9 +310,19 @@ export default function OfficeMap() {
   }, [activeMode]);
 
   // Handler para volver al menú inicial
+  const navigate = useNavigate();
+
   const handleBackToMenu = () => {
+    // Limpiar mapa antes de salir para que el siguiente acceso arranque en blanco
+    setDesks(defaultObjects);
+    setMapHeadquarters('');
+    setMapFloor('');
+    setIsExistingMap(false);
+    setScale(1);
     setActiveMode('select');
-    setScale(1); // Resetear zoom al volver al menú
+
+    // Regresar al dashboard del empleado
+    navigate('/employee');
   };
 
   // Handlers para zoom
@@ -305,7 +368,17 @@ export default function OfficeMap() {
         }))
       );
 
+      // Mantener meta seleccionada para futuras acciones de guardado/edición
+      setMapHeadquarters(headquarters);
+      setMapFloor(floor);
+
       toast.success('Mapa guardado correctamente');
+
+      // Si acabamos de crear un nuevo mapa (no existía antes), limpiar el canvas
+      if (!isExistingMap) {
+        setDesks(defaultObjects);
+      }
+
       setActiveMode('edit');
       setIsExistingMap(true);
     } catch (error) {
@@ -315,8 +388,12 @@ export default function OfficeMap() {
     }
   };
 
-  // Cargar mapa existente desde la DB para editarlo
-  const handleLoadMap = async (headquarters: string, floor: string) => {
+  // Cargar mapa existente desde la DB (usado tanto para editar como para ver)
+  const handleLoadMap = async (
+    headquarters: string,
+    floor: string,
+    mode: 'edit' | 'view' = 'edit'
+  ) => {
     try {
       const resp = await apiService.viewMap(headquarters, floor);
       setDesks(
@@ -326,9 +403,18 @@ export default function OfficeMap() {
           name: d.name || d.id?.toString() || `${d.type}-${Date.now()}`,
         }))
       );
-      setActiveMode('edit');
-      setIsExistingMap(true);
-      toast.success('Mapa cargado para editar');
+
+      if (mode === 'edit') {
+        setMapHeadquarters(headquarters);
+        setMapFloor(floor);
+        setActiveMode('edit');
+        setIsExistingMap(true);
+        toast.success('Mapa cargado');
+      } else {
+        setMapHeadquarters(headquarters);
+        setMapFloor(floor);
+        toast.success('Mapa cargado para ver');
+      }
     } catch (error) {
       console.error('Error cargando mapa:', error);
       toast.error('No se pudo cargar el mapa. Revisa la consola.');
@@ -353,6 +439,11 @@ export default function OfficeMap() {
           isDefault: d.isDefault || false,
         })),
       });
+
+      // Mantener meta seleccionada para futuras acciones de guardado/edición
+      setMapHeadquarters(headquarters);
+      setMapFloor(floor);
+
       toast.success('Mapa actualizado correctamente');
       setActiveMode('edit');
       setIsExistingMap(true);
@@ -375,6 +466,7 @@ export default function OfficeMap() {
         {/* Leyenda */}
         <MapLegend
           activeMode={activeMode}
+          initialViewOpen={initialViewOpen}
           onModeChange={handleModeChange}
           onBackToMenu={handleBackToMenu}
           onSaveMap={handleSaveMap}
@@ -398,11 +490,23 @@ export default function OfficeMap() {
             onDrop={handleSvgDrop}
             onMouseMove={handleMouseMove}
             onMouseDown={handleCanvasMouseDown}
+            onItemClick={handleCanvasMouseDown}
             onResizeStart={handleResizeStart}
             onDeleteItem={handleDeleteItem}
             scale={scale}
             readOnly={true}
+            ticketCounts={ticketCountsByLocation}
           />
+
+          {showTicketModal && user && (
+            <TicketForm
+              onClose={() => setShowTicketModal(false)}
+              userId={String(user.id)}
+              userName={user.name || user.email || ''}
+              initialLocation={ticketLocation}
+              defaultPriority={ticketDefaultPriority}
+            />
+          )}
 
           {/* Botones de zoom en la esquina inferior derecha */}
           <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2">
@@ -449,6 +553,7 @@ export default function OfficeMap() {
         {/* Leyenda del Mapa */}
         <MapLegend
           activeMode={activeMode}
+          initialViewOpen={initialViewOpen}
           onModeChange={handleModeChange}
           onBackToMenu={handleBackToMenu}
           onSaveMap={handleSaveMap}
@@ -486,9 +591,11 @@ export default function OfficeMap() {
             onDrop={handleSvgDrop}
             onMouseMove={handleMouseMove}
             onMouseDown={handleCanvasMouseDown}
+            onItemClick={handleCanvasMouseDown}
             onResizeStart={handleResizeStart}
             onDeleteItem={handleDeleteItem}
             scale={scale}
+            ticketCounts={ticketCountsByLocation}
           />
 
           {/* Botones de zoom en la esquina inferior derecha */}
@@ -527,6 +634,7 @@ export default function OfficeMap() {
       <OfficeMapHeader />
       <MapLegend
         activeMode={activeMode}
+        initialViewOpen={initialViewOpen}
         onModeChange={handleModeChange}
         onBackToMenu={handleBackToMenu}
         onSaveMap={handleSaveMap}

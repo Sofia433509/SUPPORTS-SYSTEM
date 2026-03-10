@@ -90,13 +90,13 @@ export default function KanbanBoard() {
   const role = user?.role ?? '';
   const isAdmin = role === 'admin';
 
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<TicketCategory | 'all'>('all');
 
+  const selectedTicket = selectedTicketId ? tickets.find((t) => t.id === selectedTicketId) ?? null : null;
+
   const handleDrop = (ticketId: string, newStatus: TicketStatus) => {
-    if (isAdmin) {
-      updateTicket(ticketId, { status: newStatus });
-    }
+    updateTicket(ticketId, { status: newStatus });
   };
 
   // Filtrar tickets por usuario (empleado) o mostrar todos (admin)
@@ -156,22 +156,22 @@ export default function KanbanBoard() {
             status="pending"
             tickets={ticketsByStatus.pending}
             onDrop={handleDrop}
-            onTicketClick={setSelectedTicket}
-            allowDrop={isAdmin}
+            onTicketClick={(ticket) => setSelectedTicketId(ticket.id)}
+            allowDrop={true}
           />
           <DropZone
             status="in-progress"
             tickets={ticketsByStatus['in-progress']}
             onDrop={handleDrop}
-            onTicketClick={setSelectedTicket}
-            allowDrop={isAdmin}
+            onTicketClick={(ticket) => setSelectedTicketId(ticket.id)}
+            allowDrop={true}
           />
           <DropZone
             status="resolved"
             tickets={ticketsByStatus.resolved}
             onDrop={handleDrop}
-            onTicketClick={setSelectedTicket}
-            allowDrop={isAdmin}
+            onTicketClick={(ticket) => setSelectedTicketId(ticket.id)}
+            allowDrop={true}
           />
         </div>
 
@@ -189,7 +189,7 @@ export default function KanbanBoard() {
       {selectedTicket && (
         <TicketDetailsModal
           ticket={selectedTicket}
-          onClose={() => setSelectedTicket(null)}
+          onClose={() => setSelectedTicketId(null)}
           isAdmin={isAdmin}
         />
       )}

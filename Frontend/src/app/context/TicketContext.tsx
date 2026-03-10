@@ -5,9 +5,9 @@ import { Ticket, Comment } from '../types/ticket';
 interface TicketContextType {
   tickets: Ticket[];
   addTicket: (ticket: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt' | 'comments'>) => void;
-  updateTicket: (id: string, updates: Partial<Ticket>) => void;
+  updateTicket: (id: string, updates: Partial<Ticket>) => Promise<void>;
   addComment: (ticketId: string, comment: Omit<Comment, 'id' | 'createdAt'>) => void;
-  deleteTicket: (id: string) => void;
+  deleteTicket: (id: string) => Promise<void>;
 }
 
 const TicketContext = createContext<TicketContextType | undefined>(undefined);
@@ -76,14 +76,44 @@ export function TicketProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateTicket = (id: string, updates: Partial<Ticket>) => {
-    setTickets((prev) =>
-      prev.map((ticket) =>
-        ticket.id === id
-          ? { ...ticket, ...updates, updatedAt: new Date() }
-          : ticket
-      )
-    );
+  const updateTicket = async (id: string, updates: Partial<Ticket>) => {
+    try {
+      const response = await fetch(`http://localhost:3006/api/tickets/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+
+      if (!response.ok) {
+        throw new Error('Error actualizando ticket en backend');
+      }
+
+      setTickets((prev) =>
+        prev.map((ticket) =>
+          ticket.id === id
+            ? { ...ticket, ...updates, updatedAt: new Date() }
+            : ticket
+        )
+      );
+    } catch (error) {
+      console.error('Error actualizando ticket:', error);
+    }
+  };
+
+  const deleteTicket = async (id: string) => {
+    try {
+      const response = await fetch(`http://localhost:3006/api/tickets/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Error eliminando ticket en backend');
+      }
+
+      setTickets((prev) => prev.filter((ticket) => ticket.id !== id));
+    } catch (error) {
+      console.error('Error eliminando ticket:', error);
+    }
   };
 
   const addComment = (ticketId: string, comment: Omit<Comment, 'id' | 'createdAt'>) => {
@@ -104,10 +134,6 @@ export function TicketProvider({ children }: { children: ReactNode }) {
           : ticket
       )
     );
-  };
-
-  const deleteTicket = (id: string) => {
-    setTickets((prev) => prev.filter((ticket) => ticket.id !== id));
   };
 
   return (

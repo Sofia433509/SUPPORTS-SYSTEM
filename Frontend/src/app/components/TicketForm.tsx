@@ -13,15 +13,27 @@ interface TicketFormProps {
   onClose: () => void;
   userId: string;
   userName: string;
+  initialLocation?: string;
+  defaultPriority?: 'low' | 'medium' | 'high';
 }
 
-export default function TicketForm({ onClose, userId, userName }: TicketFormProps) {
+export default function TicketForm({ onClose, userId, userName, initialLocation, defaultPriority }: TicketFormProps) {
   const { addTicket } = useTickets();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<TicketCategory>('hardware');
-  const [location, setLocation] = useState('');
-  const [assignedTo, setAssignedTo] = useState<string>('');
+  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>(defaultPriority ?? 'low');
+  const [location, setLocation] = useState(initialLocation ?? '');
+
+  // Update location if the initial location changes (e.g., clicked on a different desk)
+  React.useEffect(() => {
+    setLocation(initialLocation ?? '');
+  }, [initialLocation]);
+
+  // Update priority if a different default priority is provided (e.g., urgent desk)
+  React.useEffect(() => {
+    setPriority(defaultPriority ?? 'low');
+  }, [defaultPriority]);
 
   const technicians = [
     { id: '1', name: 'Camilo' },
@@ -54,8 +66,8 @@ export default function TicketForm({ onClose, userId, userName }: TicketFormProp
       reportedBy: userName,
       location: location || undefined,
       status: 'pending',
-      priority: 'low',
-      assignedTo: assignedTo || undefined
+      priority,
+      assignedTo: undefined
     });
 
     // Mostrar notificación de éxito
@@ -102,18 +114,27 @@ export default function TicketForm({ onClose, userId, userName }: TicketFormProp
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="location">Desk Location</Label>
-              <Select value={location} onValueChange={setLocation}>
-                <SelectTrigger id="location">
-                  <SelectValue placeholder="Select your desk" />
-                </SelectTrigger>
-                <SelectContent>
-                  {locations.map((loc) => (
-                    <SelectItem key={loc} value={loc}>
-                      {loc}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {initialLocation ? (
+                <Input
+                  id="location"
+                  value={location}
+                  readOnly
+                  className="bg-gray-100"
+                />
+              ) : (
+                <Select value={location} onValueChange={setLocation}>
+                  <SelectTrigger id="location">
+                    <SelectValue placeholder="Select your desk" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations.map((loc) => (
+                      <SelectItem key={loc} value={loc}>
+                        {loc}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -129,22 +150,6 @@ export default function TicketForm({ onClose, userId, userName }: TicketFormProp
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="assignedTo">Assign Technician</Label>
-            <Select value={assignedTo} onValueChange={setAssignedTo}>
-              <SelectTrigger id="assignedTo">
-                <SelectValue placeholder="Select a technician (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                {technicians.map((tech) => (
-                  <SelectItem key={tech.id} value={tech.id}>
-                    {tech.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t">

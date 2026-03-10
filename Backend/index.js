@@ -18,13 +18,12 @@ const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const ticketRoutes = require('./routes/ticketRoutes');
 const deskRoutes = require('./routes/deskRoutes');
-// Map routes temporarily disabled; re-enable when map functionality is restored.
-// const mapRoutes = require('./routes/mapRoutes');
+const mapRoutes = require('./routes/mapRoutes');
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/desks', deskRoutes);
-// app.use('/api/maps', mapRoutes);
+app.use('/api/maps', mapRoutes);
 
 
 // Configuración de conexión a MariaDB (reutiliza el pool central)

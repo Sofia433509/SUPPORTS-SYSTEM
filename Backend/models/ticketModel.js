@@ -46,4 +46,55 @@ const createTicket = async (ticket) => {
   }
 };
 
-module.exports = { getAllTickets, getTicketById, createTicket };
+const updateTicket = async (id, updates) => {
+  try {
+    const allowedFields = [
+      'title',
+      'description',
+      'status',
+      'user_id',
+      'desk_id',
+      'priority',
+      'category',
+      'createdByName',
+      'assignedTo',
+      'assignedToName',
+      'location'
+    ];
+
+    const setClauses = [];
+    const values = [];
+
+    for (const key of allowedFields) {
+      if (updates[key] !== undefined) {
+        setClauses.push(`${key} = ?`);
+        values.push(updates[key]);
+      }
+    }
+
+    // Always update updatedAt
+    setClauses.push('updatedAt = ?');
+    values.push(new Date());
+
+    if (!setClauses.length) {
+      throw new Error('No se proporcionaron campos para actualizar');
+    }
+
+    values.push(id);
+
+    const query = `UPDATE tickets SET ${setClauses.join(', ')} WHERE id = ?`;
+    return await pool.query(query, values);
+  } catch (err) {
+    throw err;
+  }
+};
+
+const deleteTicket = async (id) => {
+  try {
+    return await pool.query('DELETE FROM tickets WHERE id = ?', [id]);
+  } catch (err) {
+    throw err;
+  }
+};
+
+module.exports = { getAllTickets, getTicketById, createTicket, updateTicket, deleteTicket };
