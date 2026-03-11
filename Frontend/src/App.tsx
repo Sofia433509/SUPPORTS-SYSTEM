@@ -20,7 +20,17 @@ function AppRoutes() {
       <Route path="/register" element={<Register />} />
       <Route
         path="/employee"
-        element={user ? <EmployeeDashboard /> : <Navigate to="/login" replace />}
+        element={
+          user ? (
+            !isAdmin ? (
+              <EmployeeDashboard />
+            ) : (
+              <Navigate to="/admin" replace />
+            )
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
       />
       <Route
         path="/admin"

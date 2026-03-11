@@ -18,6 +18,7 @@ interface TicketDetailsModalProps {
 }
 
 const statusLabels: Record<TicketStatus, string> = {
+  urgent: 'Urgent',
   pending: 'Pending',
   'in-progress': 'In Progress',
   resolved: 'Resolved',
@@ -277,6 +278,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="urgent">Urgent</SelectItem>
                       <SelectItem value="pending">Pending</SelectItem>
                       <SelectItem value="in-progress">In Progress</SelectItem>
                       <SelectItem value="resolved">Resolved</SelectItem>

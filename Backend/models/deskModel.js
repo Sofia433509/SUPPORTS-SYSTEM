@@ -22,6 +22,11 @@ const getDeskById = async (id) => {
 const createDesk = async (desk) => {
   try {
     const { name, location, status } = desk;
+    // Evitar duplicados por nombre
+    const existing = await pool.query('SELECT id FROM desks WHERE name = ?', [name]);
+    if (existing.length) {
+      return existing[0];
+    }
     const result = await pool.query('INSERT INTO desks (name, location, status) VALUES (?, ?, ?)', [name, location, status]);
     return result;
   } catch (err) {

@@ -15,9 +15,10 @@ interface TicketFormProps {
   userName: string;
   initialLocation?: string;
   defaultPriority?: 'low' | 'medium' | 'high';
+  willBeUrgent?: boolean;
 }
 
-export default function TicketForm({ onClose, userId, userName, initialLocation, defaultPriority }: TicketFormProps) {
+export default function TicketForm({ onClose, userId, userName, initialLocation, defaultPriority, willBeUrgent = false }: TicketFormProps) {
   const { addTicket } = useTickets();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -40,6 +41,13 @@ export default function TicketForm({ onClose, userId, userName, initialLocation,
     { id: '2', name: 'Andres' },
     { id: '3', name: 'Jose' },
   ];
+
+  // Show a warning if the location already has 3+ active reports
+  const urgentNotice = willBeUrgent ? (
+    <div className="p-3 mb-4 bg-red-100 text-red-800 rounded">
+      Este escritorio ya tiene al menos 3 reportes; el ticket se marcará como <strong>urgent</strong> automáticamente.
+    </div>
+  ) : null;
 
   const locations = [
     ...Array.from({ length: 73 }, (_, i) => `D-${String(i + 1).padStart(3, '0')}`),
@@ -88,6 +96,7 @@ export default function TicketForm({ onClose, userId, userName, initialLocation,
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-6">
+          {urgentNotice}
           <div className="space-y-2">
             <Label htmlFor="title">Issue Title *</Label>
             <Input

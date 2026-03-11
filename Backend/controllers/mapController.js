@@ -10,6 +10,9 @@ exports.saveMap = async (req, res) => {
     // Buscar o crear floor
     const floorRows = await pool.query('SELECT id FROM floors WHERE name = ? AND headquarters_id = ?', [floor, hqId]);
     const floorId = floorRows.length ? floorRows[0].id : (await pool.query('INSERT INTO floors (name, headquarters_id) VALUES (?, ?)', [floor, hqId])).insertId;
+    // Antes de insertar, eliminar registros previos para evitar duplicados
+    await pool.query('DELETE FROM map_objects WHERE floor_id = ?', [floorId]);
+
     // Guardar objetos
     for (const obj of objects) {
       await pool.query('INSERT INTO map_objects (floor_id, type, name, x, y, width, height, placed, isDefault) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [floorId, obj.type, obj.name, obj.x, obj.y, obj.width, obj.height, obj.placed, obj.isDefault]);

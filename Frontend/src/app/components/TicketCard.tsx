@@ -2,7 +2,7 @@ import { useDrag } from 'react-dnd';
 import { Card, CardContent } from './ui/card';
 import { Badge } from '../components/ui/badge';
 import { Ticket, TicketCategory } from '../types/ticket';
-import { Clock, User, Tag, AlertCircle } from 'lucide-react';
+import { Clock, User, Tag, AlertCircle, MapPin } from 'lucide-react';
 
 interface TicketCardProps {
   ticket: Ticket;
@@ -43,7 +43,7 @@ export default function TicketCard({ ticket, onClick }: TicketCardProps) {
       ref={drag as any}
       className={`cursor-pointer hover:shadow-md transition-all ${
         isDragging ? 'opacity-50' : 'opacity-100'
-      }`}
+      } ${ticket.status === 'urgent' ? 'border border-red-300' : ''}`}
       onClick={onClick}
     >
       <CardContent className="p-4">
@@ -52,16 +52,19 @@ export default function TicketCard({ ticket, onClick }: TicketCardProps) {
             <h3 className="font-semibold text-sm line-clamp-2 flex-1">
               {ticket.title}
             </h3>
-            <Badge className={priorityColors[ticket.priority]} variant="secondary">
-              {ticket.priority === 'low' && 'Baja'}
-              {ticket.priority === 'medium' && 'Media'}
-              {ticket.priority === 'high' && 'Alta'}
-            </Badge>
+            <div className="flex items-center gap-1">
+              {ticket.status === 'urgent' && (
+                <Badge className="bg-red-500 text-white" variant="secondary">
+                  Urgent
+                </Badge>
+              )}
+              <Badge className={priorityColors[ticket.priority]} variant="secondary">
+                {ticket.priority === 'low' && 'Baja'}
+                {ticket.priority === 'medium' && 'Media'}
+                {ticket.priority === 'high' && 'Alta'}
+              </Badge>
+            </div>
           </div>
-
-          <p className="text-xs text-gray-600 line-clamp-2">
-            {ticket.description}
-          </p>
 
           <div className="space-y-2 text-xs text-gray-500">
             <div className="flex items-center gap-1">
@@ -72,6 +75,12 @@ export default function TicketCard({ ticket, onClick }: TicketCardProps) {
               <User className="w-3 h-3" />
               <span className="truncate">{ticket.createdByName}</span>
             </div>
+            {ticket.location && (
+              <div className="flex items-center gap-1">
+                <MapPin className="w-3 h-3" />
+                <span className="truncate">{ticket.location}</span>
+              </div>
+            )}
             {ticket.assignedToName && (
               <div className="flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" />

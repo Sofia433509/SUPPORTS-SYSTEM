@@ -97,4 +97,25 @@ const deleteTicket = async (id) => {
   }
 };
 
-module.exports = { getAllTickets, getTicketById, createTicket, updateTicket, deleteTicket };
+// if location has more than 3 non-resolved tickets, mark them all urgent
+const escalateLocationIfNeeded = async (location) => {
+  if (!location) return;
+  try {
+    const rows = await pool.query(
+      'SELECT COUNT(*) AS cnt FROM tickets WHERE location = ? AND status != ? AND status != ?',
+      [location, 'resolved', 'urgent']
+    );
+    const cnt = rows[0]?.cnt || 0;
+    // escalate when more than 2 non-resolved tickets exist (third ticket triggers)
+    if (cnt > 2) {
+      await pool.query(
+        'UPDATE tickets SET status = ? WHERE location = ? AND status != ? AND status != ?',
+        ['urgent', location, 'resolved', 'urgent']
+      );
+    }
+  } catch (err) {
+    throw err;
+  }
+};
+
+module.exports = { getAllTickets, getTicketById, createTicket, updateTicket, deleteTicket, escalateLocationIfNeeded };

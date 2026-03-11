@@ -44,10 +44,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Backend devuelve { token, user }
       const userInfo = response.user;
-      const roleRaw = userInfo.role;
+      const roleRaw = String(userInfo.role || '').trim();
+      const roleNormalized = roleRaw.toLowerCase();
+
+      // Normalizar roles / campañas que deben comportarse como empleados
       let normalizedRole: UserRole = 'employee';
-      if (roleRaw === 'IT') normalizedRole = 'admin';
-      else if (roleRaw === 'Employees') normalizedRole = 'employee';
+      if (roleNormalized === 'it' || roleNormalized === 'admin') {
+        normalizedRole = 'admin';
+      } else if (
+        roleNormalized === 'employees' ||
+        roleNormalized === 't-mobile' ||
+        roleNormalized === 'ars' ||
+        roleNormalized === 'atyt'
+      ) {
+        normalizedRole = 'employee';
+      }
 
       const userData: User = {
         id: String(userInfo.id),

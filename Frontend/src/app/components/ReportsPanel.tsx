@@ -1,8 +1,10 @@
 import { useTickets } from '../context/TicketContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { MapPin } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 const COLORS = {
+  urgent: '#ef4444',
   pending: '#fbbf24',
   'in-progress': '#3b82f6',
   resolved: '#10b981',
@@ -16,12 +18,14 @@ export default function ReportsPanel() {
 
   // Estadísticas por estado
   const byStatus = {
+    urgent: tickets.filter((t) => t.status === 'urgent').length,
     pending: tickets.filter((t) => t.status === 'pending').length,
     'in-progress': tickets.filter((t) => t.status === 'in-progress').length,
     resolved: tickets.filter((t) => t.status === 'resolved').length,
   };
 
   const statusData = [
+    { name: 'Urgent', value: byStatus.urgent, color: COLORS.urgent },
     { name: 'Pending', value: byStatus.pending, color: COLORS.pending },
     { name: 'In Progress', value: byStatus['in-progress'], color: COLORS['in-progress'] },
     { name: 'Resolved', value: byStatus.resolved, color: COLORS.resolved },
@@ -256,7 +260,11 @@ export default function ReportsPanel() {
                 <div className="flex-1">
                   <h4 className="font-medium">{ticket.title}</h4>
                   <p className="text-sm text-gray-600">
-                    {ticket.createdByName} - {formatDateTime(ticket.createdAt)}
+                    {ticket.createdByName}
+                    {ticket.location && (
+                      <><MapPin className="inline w-3 h-3 mr-1" />{ticket.location}</>
+                    )}
+                    {' '} - {formatDateTime(ticket.createdAt)}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -264,11 +272,13 @@ export default function ReportsPanel() {
                     {ticket.category}
                   </span>
                   <span className={`px-2 py-1 rounded text-xs font-medium ${
+                    ticket.status === 'urgent' ? 'bg-red-100 text-red-800' :
                     ticket.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                     ticket.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
                     'bg-green-100 text-green-800'
                   }`}>
-                    {ticket.status === 'pending' ? 'Pending' :
+                    {ticket.status === 'urgent' ? 'Urgent' :
+                     ticket.status === 'pending' ? 'Pending' :
                      ticket.status === 'in-progress' ? 'In Progress' :
                      'Resolved'}
                   </span>

@@ -1,6 +1,6 @@
 export type UserRole = 'admin' | 'employee';
 
-export type TicketStatus = 'pending' | 'in-progress' | 'resolved';
+export type TicketStatus = 'pending' | 'in-progress' | 'resolved' | 'urgent';
 export type TicketPriority = 'low' | 'medium' | 'high';
 export type TicketCategory = 'hardware' | 'software' | 'other';
 

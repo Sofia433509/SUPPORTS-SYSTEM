@@ -30,6 +30,11 @@ function DropZone({ status, tickets, onDrop, onTicketClick, allowDrop }: DropZon
   }));
 
   const statusConfig = {
+    urgent: {
+      title: 'Urgent',
+      color: 'bg-red-100 border-red-300',
+      badge: 'bg-red-500',
+    },
     pending: {
       title: 'Pending',
       color: 'bg-yellow-100 border-yellow-300',
@@ -111,6 +116,7 @@ export default function KanbanBoard() {
 
   // Agrupar por estado
   const ticketsByStatus = {
+    urgent: filteredTickets.filter((t) => t.status === 'urgent'),
     pending: filteredTickets.filter((t) => t.status === 'pending'),
     'in-progress': filteredTickets.filter((t) => t.status === 'in-progress'),
     resolved: filteredTickets.filter((t) => t.status === 'resolved'),
@@ -151,7 +157,14 @@ export default function KanbanBoard() {
         )}
 
         {/* Kanban Board */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <DropZone
+            status="urgent"
+            tickets={ticketsByStatus.urgent}
+            onDrop={handleDrop}
+            onTicketClick={(ticket) => setSelectedTicketId(ticket.id)}
+            allowDrop={true}
+          />
           <DropZone
             status="pending"
             tickets={ticketsByStatus.pending}

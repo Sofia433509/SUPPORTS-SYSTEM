@@ -42,6 +42,13 @@ export function TicketProvider({ children }: { children: ReactNode }) {
 
   const addTicket = async (ticket: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt' | 'comments'>) => {
     try {
+      // Determine if location already has >=3 non-resolved tickets
+      const location = ticket.location || '';
+      const existingCount = tickets.filter((t) => t.location === location && t.status !== 'resolved' && t.location).length;
+      // use >=2 so the third ticket (existingCount 2) triggers urgency
+      const willBeUrgent = existingCount >= 2;
+      const sendStatus = willBeUrgent ? 'urgent' : ticket.status;
+
       // Enviar ticket al backend
       const response = await fetch('http://localhost:3006/api/tickets', {
         method: 'POST',
@@ -49,7 +56,7 @@ export function TicketProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({
           title: ticket.title,
           description: ticket.description,
-          status: ticket.status,
+          status: sendStatus,
           user_id: ticket.createdBy,
           desk_id: null,
           priority: ticket.priority || 'low',
@@ -62,15 +69,32 @@ export function TicketProvider({ children }: { children: ReactNode }) {
       });
       if (!response.ok) throw new Error('Error creando ticket en backend');
       const result = await response.json();
+
       // Actualizar el estado local
       const newTicket: Ticket = {
         ...ticket,
+        status: sendStatus,
         id: result.result.insertId ? String(result.result.insertId) : `ticket-${Date.now()}`,
         createdAt: new Date(),
         updatedAt: new Date(),
         comments: [],
       };
       setTickets((prev) => [newTicket, ...prev]);
+
+      // If we crossed threshold, escalate existing tickets locally and request backend update
+      if (willBeUrgent) {
+        setTickets((prev) =>
+          prev.map((t) =>
+            t.location === location && t.status !== 'resolved' ? { ...t, status: 'urgent' } : t
+          )
+        );
+        // patch backend for each such ticket (fire & forget)
+        tickets.forEach((t) => {
+          if (t.location === location && t.status !== 'resolved' && t.status !== 'urgent') {
+            updateTicket(t.id, { status: 'urgent' }).catch((e) => console.error(e));
+          }
+        });
+      }
     } catch (error) {
       console.error('Error creando ticket:', error);
     }
@@ -95,6 +119,28 @@ export function TicketProvider({ children }: { children: ReactNode }) {
             : ticket
         )
       );
+
+      // after the update, check if modification affects urgent threshold
+      if (updates.location) {
+        const loc = updates.location;
+        const count = tickets.filter((t) => t.location === loc && t.status !== 'resolved').length;
+        if (count > 2) {
+          setTickets((prev) =>
+            prev.map((t) =>
+              t.location === loc && t.status !== 'resolved' ? { ...t, status: 'urgent' } : t
+            )
+          );
+          tickets.forEach((t) => {
+            if (t.location === loc && t.status !== 'resolved' && t.status !== 'urgent') {
+              fetch(`http://localhost:3006/api/tickets/${t.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'urgent' }),
+              }).catch((e) => console.error(e));
+            }
+          });
+        }
+      }
     } catch (error) {
       console.error('Error actualizando ticket:', error);
     }

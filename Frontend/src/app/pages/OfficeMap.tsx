@@ -505,6 +505,11 @@ export default function OfficeMap() {
               userName={user.name || user.email || ''}
               initialLocation={ticketLocation}
               defaultPriority={ticketDefaultPriority}
+              willBeUrgent={
+                ticketLocation
+                  ? (ticketCountsByLocation[ticketLocation] || 0) >= 2
+                  : false
+              }
             />
           )}
 
