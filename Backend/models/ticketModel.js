@@ -3,7 +3,12 @@ const pool = require('../db');
 
 const getAllTickets = async () => {
   try {
-    const rows = await pool.query('SELECT * FROM tickets');
+    // Traer tickets junto con el rol del usuario creador
+    const rows = await pool.query(`
+      SELECT t.*, u.role
+      FROM tickets t
+      LEFT JOIN users u ON t.user_id = u.id
+    `);
     return rows;
   } catch (err) {
     throw err;

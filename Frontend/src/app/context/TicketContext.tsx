@@ -83,22 +83,7 @@ export function TicketProvider({ children }: { children: ReactNode }) {
       };
       setTickets((prev) => [newTicket, ...prev]);
 
-      // If we crossed threshold, escalate existing tickets locally and request backend update
-      if (willBeUrgent) {
-        setTickets((prev) =>
-          prev.map((t) =>
-            (t.location || '') === locationKey && t.status !== 'resolved'
-              ? { ...t, status: 'urgent' }
-              : t
-          )
-        );
-        // patch backend for each such ticket (fire & forget)
-        tickets.forEach((t) => {
-          if ((t.location || '') === locationKey && t.status !== 'resolved' && t.status !== 'urgent') {
-            updateTicket(t.id, { status: 'urgent' }).catch((e) => console.error(e));
-          }
-        });
-      }
+      // Ya no escalamos los anteriores, solo el nuevo ticket es 'urgent'.
     } catch (error) {
       console.error('Error creando ticket:', error);
     }

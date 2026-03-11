@@ -74,7 +74,10 @@ function DropZone({ status, tickets, onDrop, onTicketClick, allowDrop }: DropZon
           {tickets.map((ticket) => (
             <TicketCard
               key={ticket.id}
-              ticket={ticket}
+              ticket={{
+                ...ticket,
+                createdByName: ticket.createdByName && ticket.role ? `${ticket.createdByName} - ${ticket.role}` : ticket.createdByName || '',
+              }}
               onClick={() => onTicketClick(ticket)}
             />
           ))}
