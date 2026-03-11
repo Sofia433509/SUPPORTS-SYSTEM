@@ -13,6 +13,7 @@ const bcrypt = require('bcryptjs');
 async function seed() {
   try {
     // Eliminar tablas si existen (borrar en orden para respetar FKs)
+    await pool.query('DROP TABLE IF EXISTS password_recovery');
     await pool.query('DROP TABLE IF EXISTS tickets');
     await pool.query('DROP TABLE IF EXISTS desks');
     await pool.query('DROP TABLE IF EXISTS map_objects');
@@ -91,6 +92,15 @@ async function seed() {
       updatedAt DATETIME,
       FOREIGN KEY (user_id) REFERENCES users(id),
       FOREIGN KEY (desk_id) REFERENCES desks(id)
+    )`);
+
+    // Crear tabla password_recovery
+    await pool.query(`CREATE TABLE IF NOT EXISTS password_recovery (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      code VARCHAR(10) NOT NULL,
+      created_at DATETIME NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )`);
 
     // Insertar datos de ejemplo para headquarters

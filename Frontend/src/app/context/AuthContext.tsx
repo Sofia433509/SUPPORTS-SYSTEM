@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode, useEffect } from 'react';
+import { createContext, useContext, useRef, useState, type ReactNode, useEffect } from 'react';
 import type { User, UserRole } from '../types/auth';
 import { apiService, type RegisterResponse } from '../utils/api';
 
@@ -20,6 +20,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Auto logout after 10 minutes of inactivity
+  const inactivityTimeout = useRef<number | null>(null);
+  const INACTIVITY_LIMIT_MS = 10 * 60 * 1000; // 10 minutes
+
+  const clearInactivityTimeout = () => {
+    if (inactivityTimeout.current) {
+      window.clearTimeout(inactivityTimeout.current);
+      inactivityTimeout.current = null;
+    }
+  };
+
+  const startInactivityTimeout = () => {
+    clearInactivityTimeout();
+    inactivityTimeout.current = window.setTimeout(() => {
+      logout();
+    }, INACTIVITY_LIMIT_MS);
+  };
+
+  const resetInactivityTimeout = () => {
+    if (user) {
+      startInactivityTimeout();
+    }
+  };
+
   useEffect(() => {
     // Check if user is logged in on app start
     const token = localStorage.getItem('access_token');
@@ -29,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const parsedUser = JSON.parse(userData);
         setUser({ ...parsedUser, access_token: token });
+        startInactivityTimeout();
       } catch (error) {
         console.error('Error parsing stored user data:', error);
         localStorage.removeItem('access_token');
@@ -37,6 +62,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setIsLoading(false);
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      clearInactivityTimeout();
+      return;
+    }
+
+    startInactivityTimeout();
+
+    const events = ['mousemove', 'mousedown', 'keypress', 'touchstart'];
+    const handleActivity = () => resetInactivityTimeout();
+
+    events.forEach((eventName) => window.addEventListener(eventName, handleActivity));
+
+    return () => {
+      events.forEach((eventName) => window.removeEventListener(eventName, handleActivity));
+      clearInactivityTimeout();
+    };
+  }, [user]);
 
   const login = async (email: string, password: string) => {
     try {
@@ -63,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userData: User = {
         id: String(userInfo.id),
         // Backend stores the name in the "name" field.
-        name: userInfo.name,
+        name: userInfo.full_name || userInfo.name || userInfo.institutional_email,
         email: userInfo.institutional_email,
         role: normalizedRole,
         campaign: userInfo.campaign,
@@ -73,6 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(userData);
       localStorage.setItem('access_token', userData.access_token || '');
       localStorage.setItem('user_data', JSON.stringify(userData));
+      startInactivityTimeout();
     } catch (error) {
       throw error;
     }
@@ -88,6 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    clearInactivityTimeout();
     setUser(null);
     localStorage.removeItem('access_token');
     localStorage.removeItem('user_data');

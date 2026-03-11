@@ -43,6 +43,8 @@ import { Search, GripVertical, RotateCw, Upload, LayoutGrid, Package } from 'luc
 interface DeskItem {
   /** Identificador único del elemento */
   id: string;
+  /** Nombre descriptivo que puede venir desde la base de datos */
+  name?: string;
   /** Posición X del elemento en el canvas (null si no está colocado) */
   x: number | null;
   /** Posición Y del elemento en el canvas (null si no está colocado) */

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTickets } from '../context/TicketContext';
 import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
@@ -13,39 +14,54 @@ interface TicketFormProps {
   onClose: () => void;
   userId: string;
   userName: string;
-  initialLocation?: string;
+  /** Texto que se muestra al usuario (nombre del desk) */
+  initialLocationLabel?: string;
+  /** Identificador interno del desk (usado para conteo/escala) */
+  initialDeskId?: string;
   defaultPriority?: 'low' | 'medium' | 'high';
-  willBeUrgent?: boolean;
+  /** Si se proporciona, redirige a esta ruta después de crear el ticket */
+  redirectTo?: string;
 }
 
-export default function TicketForm({ onClose, userId, userName, initialLocation, defaultPriority, willBeUrgent = false }: TicketFormProps) {
-  const { addTicket } = useTickets();
+export default function TicketForm({
+  onClose,
+  userId,
+  userName,
+  initialLocationLabel,
+  initialDeskId,
+  defaultPriority,
+  redirectTo,
+}: TicketFormProps) {
+  const navigate = useNavigate();
+  const { tickets, addTicket } = useTickets();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<TicketCategory>('hardware');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>(defaultPriority ?? 'low');
-  const [location, setLocation] = useState(initialLocation ?? '');
+  const [location, setLocation] = useState(initialLocationLabel ?? '');
+  const [deskId, setDeskId] = useState(initialDeskId ?? '');
 
-  // Update location if the initial location changes (e.g., clicked on a different desk)
+  // Update location label/id if the initial location changes (e.g., clicked on a different desk)
   React.useEffect(() => {
-    setLocation(initialLocation ?? '');
-  }, [initialLocation]);
+    setLocation(initialLocationLabel ?? '');
+    setDeskId(initialDeskId ?? '');
+  }, [initialLocationLabel, initialDeskId]);
+
+  // Count active (non-resolved) tickets for the current location
+  const activeTicketsForLocation = useMemo(() => {
+    if (!location) return 0;
+    return tickets.filter((t) => t.location === location && t.status !== 'resolved').length;
+  }, [location, tickets]);
 
   // Update priority if a different default priority is provided (e.g., urgent desk)
   React.useEffect(() => {
     setPriority(defaultPriority ?? 'low');
   }, [defaultPriority]);
 
-  const technicians = [
-    { id: '1', name: 'Camilo' },
-    { id: '2', name: 'Andres' },
-    { id: '3', name: 'Jose' },
-  ];
-
   // Show a warning if the location already has 3+ active reports
-  const urgentNotice = willBeUrgent ? (
+  const urgentNotice = activeTicketsForLocation >= 2 ? (
     <div className="p-3 mb-4 bg-red-100 text-red-800 rounded">
-      Este escritorio ya tiene al menos 3 reportes; el ticket se marcará como <strong>urgent</strong> automáticamente.
+      Este escritorio ya tiene {activeTicketsForLocation} reportes; el siguiente se marcará como <strong>urgent</strong> y no se podrán crear más luego.
     </div>
   ) : null;
 
@@ -64,6 +80,13 @@ export default function TicketForm({ onClose, userId, userName, initialLocation,
       return;
     }
 
+    if (activeTicketsForLocation >= 3) {
+      toast.error('Ya hay 3 tickets activos en este escritorio; no se pueden crear más.');
+      return;
+    }
+
+    const willBeUrgent = activeTicketsForLocation === 2;
+
     // Crear el nuevo ticket
     addTicket({
       title,
@@ -72,11 +95,17 @@ export default function TicketForm({ onClose, userId, userName, initialLocation,
       createdBy: userId,
       createdByName: userName,
       reportedBy: userName,
+      // Use user-visible location label (desk name/id) for display
       location: location || undefined,
-      status: 'pending',
+      deskId: deskId || undefined,
+      status: willBeUrgent ? 'urgent' : 'pending',
       priority,
       assignedTo: undefined
     });
+
+    if (willBeUrgent) {
+      toast.success('Este tercer ticket se ha creado como urgente. Después no se podrán crear más tickets en este desk.');
+    }
 
     // Mostrar notificación de éxito
     toast.success('Ticket created successfully', {
@@ -86,6 +115,11 @@ export default function TicketForm({ onClose, userId, userName, initialLocation,
 
     // Cerrar el formulario
     onClose();
+
+    // Si se provee una ruta de redirección, navegar allí para reflejar los cambios
+    if (redirectTo) {
+      navigate(redirectTo);
+    }
   };
 
   return (
@@ -123,7 +157,7 @@ export default function TicketForm({ onClose, userId, userName, initialLocation,
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="location">Desk Location</Label>
-              {initialLocation ? (
+              {initialLocationLabel ? (
                 <Input
                   id="location"
                   value={location}

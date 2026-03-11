@@ -50,3 +50,54 @@ const createUser = async (req, res) => {
 };
 
 module.exports = { getUsers, getUser, createUser };
+
+// Recuperación de contraseña
+const crypto = require('crypto');
+
+const requestPasswordRecovery = async (req, res) => {
+  const email = req.body.institutional_email || req.body.email;
+  if (!email) return res.status(400).json({ error: 'Email requerido' });
+  // Generar código aleatorio
+  const code = crypto.randomInt(100000, 999999).toString();
+  try {
+    await userModel.saveRecoveryCode(email, code);
+    res.json({ message: 'Código generado', code }); // Mostrar código para pruebas
+  } catch (err) {
+    res.status(500).json({ error: 'Error generando código', detail: err.message });
+  }
+};
+
+const verifyRecoveryCode = async (req, res) => {
+  const email = req.body.institutional_email || req.body.email;
+  const code = req.body.code;
+  if (!email || !code) return res.status(400).json({ error: 'Email y código requeridos' });
+  try {
+    const valid = await userModel.verifyRecoveryCode(email, code);
+    if (!valid) return res.status(400).json({ error: 'Código inválido o expirado' });
+    res.json({ message: 'Código válido' });
+  } catch (err) {
+    res.status(500).json({ error: 'Error verificando código', detail: err.message });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  const email = req.body.institutional_email || req.body.email;
+  const code = req.body.code;
+  const newPassword = req.body.new_password;
+  if (!email || !code || !newPassword) return res.status(400).json({ error: 'Datos requeridos' });
+  try {
+    const valid = await userModel.verifyRecoveryCode(email, code);
+    if (!valid) return res.status(400).json({ error: 'Código inválido o expirado' });
+    // Hashear nueva contraseña
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await userModel.updatePassword(email, hashed);
+    await userModel.deleteRecoveryCodes(email);
+    res.json({ message: 'Contraseña actualizada' });
+  } catch (err) {
+    res.status(500).json({ error: 'Error actualizando contraseña', detail: err.message });
+  }
+};
+
+module.exports.requestPasswordRecovery = requestPasswordRecovery;
+module.exports.verifyRecoveryCode = verifyRecoveryCode;
+module.exports.resetPassword = resetPassword;

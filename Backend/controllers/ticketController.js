@@ -21,6 +21,7 @@ const getTicket = async (req, res) => {
 
 const createTicket = async (req, res) => {
   try {
+    console.log('Creating ticket with payload:', req.body);
     const result = await ticketModel.createTicket(req.body);
     // after insertion, escalate if location threshold reached
     if (req.body.location) {
@@ -30,9 +31,12 @@ const createTicket = async (req, res) => {
         console.error('Error escalating location after create', e);
       }
     }
-    res.status(201).json({ message: 'Ticket creado', result });
+
+    const insertId = typeof result?.insertId === 'bigint' ? result.insertId.toString() : result?.insertId;
+    res.status(201).json({ message: 'Ticket creado', insertId });
   } catch (err) {
-    res.status(500).json({ error: 'Error al crear ticket' });
+    console.error('Error creating ticket:', err);
+    res.status(500).json({ error: 'Error al crear ticket', details: err.message });
   }
 };
 
@@ -40,6 +44,7 @@ const updateTicket = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
+    console.log(`Updating ticket ${id} with:`, updates);
     await ticketModel.updateTicket(id, updates);
     // if location was changed or new urgent status might be needed
     if (updates.location) {
@@ -51,7 +56,8 @@ const updateTicket = async (req, res) => {
     }
     res.json({ message: 'Ticket actualizado' });
   } catch (err) {
-    res.status(500).json({ error: 'Error al actualizar ticket' });
+    console.error('Error updating ticket:', err);
+    res.status(500).json({ error: 'Error al actualizar ticket', details: err.message });
   }
 };
 

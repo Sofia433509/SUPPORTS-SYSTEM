@@ -296,7 +296,7 @@ export default function MapCanvas({
               <rect
                 width={item.width}
                 height={item.height}
-                fill={getFillColor(item, ticketCounts?.[item.name || item.id] ?? 0)}
+                fill={getFillColor(item, ticketCounts?.[item.id] ?? 0)}
                 rx={8} // Bordes redondeados
                 onMouseDown={() => !readOnly && onMouseDown(item.id)} // Iniciar arrastre
                 onClick={() => readOnly && onItemClick?.(item.id)}

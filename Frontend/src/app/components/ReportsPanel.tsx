@@ -61,18 +61,21 @@ export default function ReportsPanel() {
   const statusCategoryData = [
     {
       category: 'Hardware',
+      Urgent: tickets.filter((t) => t.category === 'hardware' && t.status === 'urgent').length,
       Pending: tickets.filter((t) => t.category === 'hardware' && t.status === 'pending').length,
       'In Progress': tickets.filter((t) => t.category === 'hardware' && t.status === 'in-progress').length,
       Resolved: tickets.filter((t) => t.category === 'hardware' && t.status === 'resolved').length,
     },
     {
       category: 'Software',
+      Urgent: tickets.filter((t) => t.category === 'software' && t.status === 'urgent').length,
       Pending: tickets.filter((t) => t.category === 'software' && t.status === 'pending').length,
       'In Progress': tickets.filter((t) => t.category === 'software' && t.status === 'in-progress').length,
       Resolved: tickets.filter((t) => t.category === 'software' && t.status === 'resolved').length,
     },
     {
       category: 'Other',
+      Urgent: tickets.filter((t) => t.category === 'other' && t.status === 'urgent').length,
       Pending: tickets.filter((t) => t.category === 'other' && t.status === 'pending').length,
       'In Progress': tickets.filter((t) => t.category === 'other' && t.status === 'in-progress').length,
       Resolved: tickets.filter((t) => t.category === 'other' && t.status === 'resolved').length,
@@ -236,6 +239,7 @@ export default function ReportsPanel() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
+                <Bar dataKey="Urgent" fill={COLORS.urgent} />
                 <Bar dataKey="Pending" fill={COLORS.pending} />
                 <Bar dataKey="In Progress" fill={COLORS['in-progress']} />
                 <Bar dataKey="Resolved" fill={COLORS.resolved} />

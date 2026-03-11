@@ -27,6 +27,7 @@ export function TicketProvider({ children }: { children: ReactNode }) {
           ? data.map(ticket => ({
               ...ticket,
               createdBy: ticket.user_id,
+              deskId: ticket.desk_id,
               createdAt: ticket.createdAt ? new Date(ticket.createdAt) : new Date(),
               updatedAt: ticket.updatedAt ? new Date(ticket.updatedAt) : new Date(),
               comments: ticket.comments || [],
@@ -43,8 +44,8 @@ export function TicketProvider({ children }: { children: ReactNode }) {
   const addTicket = async (ticket: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt' | 'comments'>) => {
     try {
       // Determine if location already has >=3 non-resolved tickets
-      const location = ticket.location || '';
-      const existingCount = tickets.filter((t) => t.location === location && t.status !== 'resolved' && t.location).length;
+      const locationKey = ticket.location || '';
+      const existingCount = tickets.filter((t) => (t.location || '') === locationKey && t.status !== 'resolved').length;
       // use >=2 so the third ticket (existingCount 2) triggers urgency
       const willBeUrgent = existingCount >= 2;
       const sendStatus = willBeUrgent ? 'urgent' : ticket.status;
@@ -64,7 +65,7 @@ export function TicketProvider({ children }: { children: ReactNode }) {
           createdByName: ticket.createdByName,
           assignedTo: ticket.assignedTo || '',
           assignedToName: ticket.assignedToName || '',
-          location: ticket.location || '',
+          location: locationKey,
         })
       });
       if (!response.ok) throw new Error('Error creando ticket en backend');
@@ -74,7 +75,8 @@ export function TicketProvider({ children }: { children: ReactNode }) {
       const newTicket: Ticket = {
         ...ticket,
         status: sendStatus,
-        id: result.result.insertId ? String(result.result.insertId) : `ticket-${Date.now()}`,
+        location: locationKey,
+        id: result.insertId ? String(result.insertId) : `ticket-${Date.now()}`,
         createdAt: new Date(),
         updatedAt: new Date(),
         comments: [],
@@ -85,12 +87,14 @@ export function TicketProvider({ children }: { children: ReactNode }) {
       if (willBeUrgent) {
         setTickets((prev) =>
           prev.map((t) =>
-            t.location === location && t.status !== 'resolved' ? { ...t, status: 'urgent' } : t
+            (t.location || '') === locationKey && t.status !== 'resolved'
+              ? { ...t, status: 'urgent' }
+              : t
           )
         );
         // patch backend for each such ticket (fire & forget)
         tickets.forEach((t) => {
-          if (t.location === location && t.status !== 'resolved' && t.status !== 'urgent') {
+          if ((t.location || '') === locationKey && t.status !== 'resolved' && t.status !== 'urgent') {
             updateTicket(t.id, { status: 'urgent' }).catch((e) => console.error(e));
           }
         });

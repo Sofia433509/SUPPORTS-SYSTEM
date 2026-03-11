@@ -91,7 +91,8 @@ export default function OfficeMap() {
   const [scale, setScale] = useState(1);
   const { tickets } = useTickets();
   const [showTicketModal, setShowTicketModal] = useState(false);
-  const [ticketLocation, setTicketLocation] = useState('');
+  const [ticketLocationId, setTicketLocationId] = useState('');
+  const [ticketLocationLabel, setTicketLocationLabel] = useState('');
   const [ticketDefaultPriority, setTicketDefaultPriority] = useState<'low' | 'medium' | 'high'>('low');
   const location = useLocation();
   const [initialViewOpen, setInitialViewOpen] = useState(false);
@@ -256,8 +257,9 @@ export default function OfficeMap() {
   const ticketCountsByLocation = useMemo(() => {
     const map: Record<string, number> = {};
     tickets.forEach((t) => {
-      if (!t.location) return;
-      map[t.location] = (map[t.location] || 0) + 1;
+      const key = t.deskId || t.location;
+      if (!key) return;
+      map[key] = (map[key] || 0) + 1;
     });
     return map;
   }, [tickets]);
@@ -265,15 +267,17 @@ export default function OfficeMap() {
   const handleCanvasMouseDown = (id: string) => {
     if (activeMode === 'view') {
       const clickedDesk = desks.find((d) => d.id === id);
-      const locationName = clickedDesk?.name || id;
-      const currentCount = ticketCountsByLocation[locationName] || 0;
+      const locationId = clickedDesk?.id || id;
+      const locationLabel = clickedDesk?.name || id;
+      const currentCount = ticketCountsByLocation[locationId] || 0;
 
       if (currentCount >= 3) {
         toast.error('Este puesto ya tiene 3 reportes. No se pueden crear más tickets.');
         return;
       }
 
-      setTicketLocation(locationName);
+      setTicketLocationId(locationId);
+      setTicketLocationLabel(locationLabel);
       setTicketDefaultPriority(currentCount >= 2 ? 'high' : 'low');
       setShowTicketModal(true);
       return;
@@ -503,13 +507,10 @@ export default function OfficeMap() {
               onClose={() => setShowTicketModal(false)}
               userId={String(user.id)}
               userName={user.name || user.email || ''}
-              initialLocation={ticketLocation}
+              initialLocationLabel={ticketLocationLabel}
+              initialDeskId={ticketLocationId}
               defaultPriority={ticketDefaultPriority}
-              willBeUrgent={
-                ticketLocation
-                  ? (ticketCountsByLocation[ticketLocation] || 0) >= 2
-                  : false
-              }
+              redirectTo="/employee"
             />
           )}
 
